@@ -26,6 +26,7 @@ seq 64 | awk '{print sin($1/10)}' | uchart -y5 -s
 ```bash
 uchart -h
 ```
+```
 usage: uchart [-h] [-y HEIGHT] [-x WIDTH] [-m] [-l] [-s] [-t TOPV] [-d DOWNV]
 
 options:
@@ -41,3 +42,4 @@ options:
                         Maximum value in chart.
   -d DOWNV, --down-value DOWNV
                         Minimum value in chart.
+```
