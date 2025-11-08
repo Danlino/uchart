@@ -36,9 +36,7 @@ seq 64 | awk '{print sin($1/10)}' | uchart -y5
           └────────────────────────────────
 ```
 
-```bash
-uchart -h
-```
+
 ```
 usage: uchart [-h] [-y HEIGHT] [-x WIDTH] [-m] [-l] [-s] [-t TOPV] [-d DOWNV]
 
