@@ -6,7 +6,7 @@ It serves for simple visualization
 of a chart from data read from  
 stdin directly in the terminal.  
 For the proper rendering of  
-the chart, UTF-8 character 
+the chart, UTF-8 character  
 set support is required.
 
 
