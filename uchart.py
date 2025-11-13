@@ -14,29 +14,39 @@ def get_arg():
                         help='Maximum chart width in characters')
     parser.add_argument('-m', '--merge',
                         action='store_true',
-                        help='Do not display average multiple values per column; show all points.')
+                        help='Do not display average multiple values per column; show all points')
     parser.add_argument('-l', '--no-legend',
                         action='store_false', dest='show_legend', default=True,
-                        help='Do not display the chart legend.')
-    parser.add_argument('-s', '--no-stat',
+                        help='Do not display the chart legend')
+    parser.add_argument('-n', '--no-stat',
                         action='store_false', dest='show_stat', default=True,
-                        help='Do not display the chart stat.')
+                        help='Do not display the chart stat')
     parser.add_argument('-t', '--top-value',
-                        type=int, default=None, dest='topv',
-                        help='Maximum value in chart.')
-    parser.add_argument('-d', '--down-value',
-                        type=int, default=None, dest='downv',
-                        help='Minimum value in chart.')
+                        type=float, default=None, dest='topv',
+                        help='Maximum value in chart (upper limit of Y-axis)')
+    parser.add_argument('-b', '--bottom-value',
+                        type=float, default=None, dest='bottomv',
+                        help='Minimum value in chart (lower limit of Y-axis)')
+    parser.add_argument('-s', '--scale',
+                        type=float, default=1.0, dest='scale',
+                        help='Scale factor to multiply all data values by (default: %(default)s)')
+    parser.add_argument('-f', '--format',
+                        type=str, choices=[',', '.'], dest='separator', default=None, metavar='SEP',
+                        help="If numbers contain thousands separator, specify it: ',' or '.' (e.g. -f ,)"
+)
     return parser.parse_args()
 
 arg = get_arg()
+
+SHOWLEGEND = arg.show_legend
+SHOWSTATS  = arg.show_stat
 YHEIGHT    = arg.height
 XWIDTH     = arg.width
 MERGEM     = arg.merge
-SHOWLEGEND = arg.show_legend
-SHOWSTATS  = arg.show_stat
 TOPVAL     = arg.topv
-DOWNV      = arg.downv
+DOWNV      = arg.bottomv
+SCALE      = arg.scale
+SEPA       = arg.separator
 
 def get_terminal_width():
     try:
@@ -101,6 +111,11 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor):
         min_val = min(original_raw_values)
         max_val = max(original_raw_values)
 
+    if TOPVAL is not None:
+        max_val = TOPVAL
+    if DOWNV is not None:
+        min_val = DOWNV
+    
     value_range = max_val - min_val
 
     if XWIDTH and XWIDTH > 0 and XWIDTH < get_terminal_width() - 17:
@@ -115,11 +130,11 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor):
         total_original_values = len(original_raw_values)
         num_plot_columns = len(values_for_plot)
         if MERGEM:
-            print(f"[Bod = všetky hodnoty z {compression_factor} vstupov, celkovo {total_original_values} hodnôt v {num_plot_columns} stĺpcoch]\n")
+            print(f"\n[{total_original_values} values in {num_plot_columns} columns; {compression_factor} values in a column]")
         elif compression_factor == 1:
-            print(f"[Bod = 1 hodnota, {total_original_values} hodnôt]\n")
+            print(f"\n[{total_original_values} values]")
         else:
-            print(f"[Bod = priemer z {compression_factor} hodnôt, celkovo {total_original_values} hodnôt v {num_plot_columns} stĺpcoch]\n")
+            print(f"\n[{total_original_values} values; average of {compression_factor} values in a column]")
 
 
     legend_levels = YHEIGHT
@@ -175,10 +190,12 @@ def main():
     raw_values = []
     try:
         for line in sys.stdin:
+            if SEPA:
+                line = line.replace(SEPA, '')
             line = line.strip().replace(',', '.')
             if line:
                 try:
-                    value = float(line)
+                    value = float(line) * SCALE
                     if TOPVAL and value > TOPVAL:
                         value = TOPVAL
                     if DOWNV and value < DOWNV:
