@@ -89,29 +89,29 @@ _**options:**_
 **-h**, --help  
 &emsp;`show this help message and exit`
 
-**-y** <ins>NUMBER</ins>, --height <ins>NUMBER</ins> 
+**-y** <ins>NUMBER</ins>, --height <ins>NUMBER</ins>  
 &emsp;`Chart height in lines (default: 7)`
 
-**-x** <ins>NUMBER</ins>, --width <ins>NUMBER</ins>
+**-x** <ins>NUMBER</ins>, --width <ins>NUMBER</ins>  
 &emsp;`Maximum chart width in characters`
 
-**-m**, --merge
+**-m**, --merge  
 &emsp;`Do not display average multiple values per column; show all points`
 
-**-l**, --no-legend
+**-l**, --no-legend  
 &emsp;`Do not display the chart legend`
 
-**-n**, --no-stat
+**-n**, --no-stat  
 &emsp;`Do not display the chart stat`
 
-**-t** <ins>NUMBER</ins>, --top-value <ins>NUMBER</ins>
+**-t** <ins>NUMBER</ins>, --top-value <ins>NUMBER</ins>  
 &emsp;`Maximum value in chart (upper limit of Y-axis)`
 
-**-b** <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins>
+**-b** <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins>  
 &emsp;`Minimum value in chart (lower limit of Y-axis)`
 
-**-s** <ins>NUMBER</ins>, --scale <ins>NUMBER</ins>
+**-s** <ins>NUMBER</ins>, --scale <ins>NUMBER</ins>  
 &emsp;`Scale factor to multiply all data values by (default: 1.0)`
 
-**-f** <ins>SEP</ins>, --format <ins>SEP</ins>
+**-f** <ins>SEP</ins>, --format <ins>SEP</ins>  
 &emsp;`If numbers contain thousands separator, specify it: ',' or '.' (e.g. -f ,)`
