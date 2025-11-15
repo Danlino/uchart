@@ -18,7 +18,7 @@ seq -20 40 | uchart
 ```
 
 ```
-seq 0 0.1 13 | awk '{print sin($1)}' | uchart -x40 -m
+seq 130 | awk '{print sin($1/10)}' | uchart -x40 -m
 
 [131 values in 66 columns; 2 values in a column]
      1.00 │ ⠀⠀⣠⠒⠓⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡰⠒⠲⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
