@@ -1,13 +1,6 @@
 # uchart
 
-Uchart is a single-file application with  
-no dependencies written in Python.  
-It serves for simple visualization  
-of a chart from data read from  
-stdin directly in the terminal.  
-For the proper rendering of  
-the chart, UTF-8 character  
-set support is required.
+Uchart is a single-file application with no dependencies written in Python. It serves for simple visualization of a chart from data read from stdin directly in the terminal. For the proper rendering of the chart, UTF-8 character set support is required.
 
 
 ```
@@ -50,7 +43,7 @@ awk '/^2025-10-02 15/{print $3}' eufr-2025-10.tsv | uchart -m
     49.97 │ ⠀⠀⠀⠀⠀⠛⠛⣿⠇⠁⠿⠋⠛⠀⠀⠀⠀⠈⠛⢷⣼⣆⢠⢀⠀⢀⣾⠇⠀⠀⠀⠀⠈⢻⣾⣇⣇⡿⢹⡟⠋⠀⠀⠀⠀⠀⠀⠈⠹⠻⠘⠇⠀⠀⠀
     49.94 │ ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠙⠿⣾⣼⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠈⠘⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     49.92 │ ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-          └───────────────────────────────────────────────────────
+          └───────────────────────────────────────────────────────────────────
 ```
 ```bash
 awk '/^2025-10-02 15/{print $3}' eufr-2025-10.tsv | uchart
@@ -64,7 +57,7 @@ awk '/^2025-10-02 15/{print $3}' eufr-2025-10.tsv | uchart
     49.97 │ ⠀⠀⠀⠀⠀⠈⠉⠔⠁⠀⠀⠀⠁⠀⠀⠀⠀⠀⠁⠡⡠⠄⠀⠀⠀⠀⡠⠀⠀⠀⠀⠀⠀⠑⠔⢂⠂⠒⠠⠂⠁⠀⠀⠀⠀⠀⠀⠀⠐⠁⠀⠀⠀⠀⠀
     49.94 │ ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠌⠤⠐⠒⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     49.92 │ ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-          └───────────────────────────────────────────────────────
+          └────────────────────────────────────────────────────────────────────
 ```
 ### Big data
 ```bash
@@ -79,39 +72,52 @@ awk '{print $3}' eufr-2025-10.tsv | uchart -m
     49.94 │ ⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⣿⢿⣿⣿⣿⣿⡿⡿⣿⣿⢻⣿⣿⣿⣿⣿⡿⣿⡿⢿⣿⣿⣿⡿⣿⣿⣿⣿⣿⣿⡿⣿⣿⣿⣿⣿
     49.90 │ ⠀⠉⠛⠙⠸⡏⡿⢻⡿⡿⠏⠃⠈⠀⠘⠈⠈⠇⡟⠇⠈⠏⢸⠸⠛⠀⡇⠈⠙⠘⠘⠛⠋⡇⠇⠁⢹⠃⠘⢸⢸⠃⡇⡏⠉⢻⠈⠹⠁⠇⠇⠇⠁⠙⠈
     49.86 │ ⠀⠀⠀⠀⠀⠁⠃⠸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠃⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠁⠁⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀
-          └───────────────────────────────────────────────────────
+          └───────────────────────────────────────────────────────────────────
 ```
 ---
 usage: uchart [**-h**] [**-y** HEIGHT] [**-x** WIDTH] [**-m**] [**-l**] [**-n**] [**-t** TOPV] [**-b** BOTTOMV] [**-s** SCALE] [**-f** SEP]
 
 
 _**options:**_
-**-h**, --help  
+**-h**, --help
 &emsp;`show this help message and exit`
 
-**-y** <ins>NUMBER</ins>, --height <ins>NUMBER</ins>  
+**-y** <ins>NUMBER</ins>, --height <ins>NUMBER</ins>
 &emsp;`Chart height in lines (default: 7)`
 
-**-x** <ins>NUMBER</ins>, --width <ins>NUMBER</ins>  
+**-x** <ins>NUMBER</ins>, --width <ins>NUMBER</ins>
 &emsp;`Maximum chart width in characters`
 
-**-m**, --merge  
+**-m**, --merge
 &emsp;`Do not display average multiple values per column; show all points`
 
-**-l**, --no-legend  
+**-l**, --no-legend
 &emsp;`Do not display the chart legend`
 
-**-n**, --no-stat  
+**-n**, --no-stat
 &emsp;`Do not display the chart stat`
 
-**-t** <ins>NUMBER</ins>, --top-value <ins>NUMBER</ins>  
+**-t** <ins>NUMBER</ins>, --top-value <ins>NUMBER</ins>
 &emsp;`Maximum value in chart (upper limit of Y-axis)`
 
-**-b** <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins>  
+**-b** <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins>
 &emsp;`Minimum value in chart (lower limit of Y-axis)`
 
-**-s** <ins>NUMBER</ins>, --scale <ins>NUMBER</ins>  
+**-s** <ins>NUMBER</ins>, --scale <ins>NUMBER</ins>
 &emsp;`Scale factor to multiply all data values by (default: 1.0)`
 
-**-f** <ins>SEP</ins>, --format <ins>SEP</ins>  
+**-f** <ins>SEP</ins>, --format <ins>SEP</ins>
 &emsp;`If numbers contain thousands separator, specify it: ',' or '.' (e.g. -f ,)`
+
+---
+Sample data structure in the example.
+```sh
+$ head -3 eufr-2025-10.tsv; echo '...'; tail -3 eufr-2025-10.tsv
+2025-10-01 00:00:00	50,04144
+2025-10-01 00:00:01	50,035435
+2025-10-01 00:00:02	50,02934
+...
+2025-10-31 23:59:57	50,01183
+2025-10-31 23:59:58	50,01234
+2025-10-31 23:59:59	50,010765
+```
