@@ -79,13 +79,13 @@ usage: uchart [**-h**] [**-y** HEIGHT] [**-x** WIDTH] [**-m**] [**-l**] [**-n**]
 
 
 _**options:**_
-**-h**, --help
+**-h**, --help  
 &emsp;`show this help message and exit`
 
-**-y** <ins>NUMBER</ins>, --height <ins>NUMBER</ins>
+**-y** <ins>NUMBER</ins>, --height <ins>NUMBER</ins>  
 &emsp;`Chart height in lines (default: 7)`
 
-**-x** <ins>NUMBER</ins>, --width <ins>NUMBER</ins>
+**-x** <ins>NUMBER</ins>, --width <ins>NUMBER</ins>  
 &emsp;`Maximum chart width in characters`
 
 **-m**, --merge
