@@ -196,9 +196,9 @@ def main():
             if line:
                 try:
                     value = float(line) * SCALE
-                    if TOPVAL and value > TOPVAL:
+                    if TOPVAL is not None and value > TOPVAL:
                         value = TOPVAL
-                    if DOWNV and value < DOWNV:
+                    if DOWNV is not None and value < DOWNV:
                         value = DOWNV
                     raw_values.append(value)
                 except ValueError:
