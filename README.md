@@ -101,7 +101,7 @@ For testing/demo purposes, the following one-liner creates a temporary file `/tm
 ```
 To monitor the live data stream itself, simply run:
 ```bash
-watch -n1 "tail -30 /tmp/pingfile | uchart -y5"
+watch -n1 "tail -30 /tmp/pingfile | uchart"
 ```
 
 ---
