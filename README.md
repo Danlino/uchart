@@ -107,11 +107,11 @@ watch -n1 "tail -30 /tmp/pingfile | uchart -y5"
 ---
 <u>**USAGE:**</u> &emsp;uchart [**-h**] [**-y** <NUMBER>] [**-x** <NUMBER>] [**-m**] [**-l**] [**-n**] [**-t** <NUMBER>] [**-b** <NUMBER>] [**-s** <NUMBER>] [**-a** <NUMBER>] [**-f** SEP] [file]
 
-_**positional arguments:**_
+_**positional arguments:**_  
 **file**  
 &emsp;`Input is read from stdin if piped, otherwise from the given file.`
 
-_**options:**_
+_**options:**_  
 **-h**, --help  
 &emsp;`Show this help message and exit.`
 
