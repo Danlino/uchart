@@ -35,8 +35,8 @@ $ seq 130 | awk '{print sin($1/10)}' | uchart -x40 -m
 ```
 ### All values (-m) & Average value
 
-- With `-m`: all raw values from a column are plotted as separate points/lines
-- Without `-m` (default): only the arithmetic mean of the column is shown
+- With `-m`:&emsp;all raw values from a column are plotted as separate points
+- Without `-m`:&emsp;only the arithmetic mean of the column is shown (default)
 
 ```bash
 awk '/^2025-10-02 15/{print $3}' eufr-2025-10.tsv | uchart -m
@@ -97,7 +97,7 @@ Result: the chart is perfectly centered around the ideal 50 Hz (the middle line 
 
 For testing/demo purposes, the following one-liner creates a temporary file `/tmp/pingfile`, fills it with fresh ping latency values every second for one minute, and automatically deletes the file afterwards:
 ```bash
-(for i in {1..60}; do ping -n -c 1 -W 1 8.8.4.4 | grep -o 'time=[0-9.]*' | cut -d= -f2; sleep 1; done ) >> /tmp/pingfile && rm /tmp/pingfile &
+(for i in {1..60}; do ping -nc1 -W1 8.8.4.4 | grep -o 'time=[0-9.]*' | cut -d= -f2; sleep 1; done ) >> /tmp/pingfile && rm /tmp/pingfile &
 ```
 To monitor the live data stream itself, simply run:
 ```bash
