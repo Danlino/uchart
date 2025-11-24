@@ -208,9 +208,9 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
         if SHOWLEGEND:
             lg = legend_values[row]
             if all( c in '0.-' for c in f"{lg:.{zend}f}" ):
-                line += f"{'':{long_numbers+2}}0 │ "
+                line += f"{'':{long_numbers+2}}0 │"
             else:
-                line += f"{lg:>{3+long_numbers}.{zend}f} │ "
+                line += f"{lg:>{3+long_numbers}.{zend}f} │"
 
         for i in range(0, len(values_for_plot), 2):
             dots = [False] * 8
