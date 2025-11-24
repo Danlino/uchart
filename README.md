@@ -113,6 +113,12 @@ To monitor the live data stream itself, simply run:
 ```bash
 watch -n1 "tail -30 /tmp/pingfile | uchart"
 ```
+---
+### Unified Y-axis scale (multi-chart)
+When displaying multiple charts side-by-side, use the same `-t` / `--top` and `-b` / `--bottom` values for all of them.  
+This keeps a common Y-axis range and makes the charts visually comparable.
+
+![multi-chart](images/multichart.png)
 
 ---
 <u>**USAGE:**</u> &emsp;uchart [**-h**] [**-y** <NUMBER>] [**-x** <NUMBER>] [**-m**] [**-l**] [**-n**] [**-t** <NUMBER>] [**-b** <NUMBER>] [**-s** <NUMBER>] [**-a** <NUMBER>] [**-f** SEP] [file]
@@ -185,7 +191,7 @@ Useful for:
 - preventing extreme spikes from distorting the scale
 - focusing on the relevant range
 - stabilizing the scale with noisy data
-- creating clean, readable output even with outliers
+
 
 ---
 **-s** <ins>NUMBER</ins>, --shift <ins>NUMBER</ins>  
