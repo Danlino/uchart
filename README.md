@@ -2,7 +2,7 @@
 
 # <u>uchart</u>
 
-**Uchart is** a single-file **terminal command** with no dependencies written in Python. It serves **for simple visualization of a chart** from data read from stdin directly in the terminal. For the proper rendering of the chart, UTF-8 character set support is required. Numeric values must be separated by newlines. One number per line expected; other lines skipped. When input lines contain multiple whitespace- or tab-separated values, the -c N / --column N option selects the N-th column (1-based) for plotting.
+**Uchart is** a single-file **terminal command** with no dependencies written in Python. It serves **for simple visualization of a chart** from data read from stdin directly in the terminal. For the proper rendering of the chart, UTF-8 character set support is required. Numeric values must be separated by newlines. One number per line expected; other lines skipped. When input lines contain multiple whitespace or tab-separated values, the -c N / --column N option selects the N-th column (1-based) for plotting.
 
 
 ```
@@ -66,22 +66,32 @@ awk '/^2025-10-02 15/{print $3}' eufr-2025-10.tsv | uchart
     49.92 │ ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
           └────────────────────────────────────────────────────────────────────
 ```
-### Data scaling & offset
+### Decimal point shift & offset
 
-Data can be multiplied by a constant or a constant can be added to (or subtracted from) them before plotting.
-In the following example I am displaying the measured mains frequency in Hz. By subtracting 50 (`-a` -50) and then multiplying by 1000 (`-s` 1000), the chart will show the values in millihertz (mHz) while the centre line of the graph represents the ideal value of 50 Hz.
+uchart does not use SI prefixes (K, M, G, T) or scientific notation in axis legends.  
+With very large or very small numbers, the Y-axis labels would otherwise become excessively wide.
+
+The `-s` / `--shift` option lets you move the decimal point left or right across all values:
+
+- Positive number → shift right (multiply by powers of 10)  
+- Negative number → shift left (divide by powers of 10)  
+
+The value itself specifies how many places to shift.
+
+Additionally, the `-a` / `--add` option adds or subtracts a constant from every value.  
+This is especially useful for moving a reference value (e.g. the nominal 50 Hz mains frequency) to zero so deviations are easier to read.
 
 ##### Example: Display mains frequency deviation in millihertz (centered around 50 Hz)
 
 ```
-uchart -c3 -a -50 -s 1000 -b -150 -t 150 -m eufr-2025-10.tsv
+uchart -c3 -a-50 -s3 -b-150 -t150 -m eufr-2025-10.tsv
 ```
 
 | Switch   | Meaning                                                                 | Result after transformation |
 |----------|--------------------------------------------------------------------------|----------------------------|
 | `-c3`    | Use 3rd column of the file                                           | e.g. 50.012 Hz             |
 | `-a -50` | Subtract 50 from every value                                             | → 0.012 Hz                 |
-| `-s 1000`| Multiply every value by 1000                                              | → 12 mHz                   |
+| `-s 3`   | Multiply every value by 1000                                              | → 12 mHz                   |
 | `-b -150`| Fixed bottom boundary of the chart                                       | -150 mHz                   |
 | `-t 150` | Fixed top boundary of the chart                                          | +150 mHz                   |
 | `-m`     | show all points              | –                          |
@@ -110,37 +120,101 @@ watch -n1 "tail -30 /tmp/pingfile | uchart"
 _**positional arguments:**_  
 **file**  
 &emsp;`Input is read from stdin if piped, otherwise from the given file.`
+  
 
 _**options:**_  
-**-h**, --help  
-&emsp;`Show this help message and exit.`
 
+**-h**, --help  
+&emsp;`Show help message and exit.`
+
+---
 **-y** <ins>NUMBER</ins>, --height <ins>NUMBER</ins>  
 &emsp;`Chart height in lines. (default: 7)`
 
+Minimum height of the chart is 2 terminal rows. Values less than 2 are forced to 2.
+
+---
 **-x** <ins>NUMBER</ins>, --width <ins>NUMBER</ins>  
 &emsp;`Maximum chart width in characters.`
 
-**-m**, --merge  
+uchart automatically fits the terminal width by default.
+Since the X-axis is linear and all columns have the same number of samples, the final width is rounded down. This means the chart may end up substantially narrower than the window.
+With the `-x` / `--width` option you can set a custom maximum chart width (different from the terminal window width).
+
+---
+**-m**, --multi  
 &emsp;`Do not display average multiple values per column; show all points.`
 
+By default, when a column contains multiple values, uchart plots only a single point representing the arithmetic mean of all values in that column. This can hide peak/outlier values.
+The `-m` / `--multi` flag forces uchart to plot every individual value instead.
+
+---
 **-c** <ins>NUMBER</ins>, --column <ins>NUMBER</ins>  
 &emsp;`Specifies which field (column) in the input line to use.`
 
+By default (without `-c`), **uchart** expects **exactly one numeric value per line**.  
+Lines containing multiple values or non-numeric content are silently skipped.
+
+Use the `-c N` / `--column N` option to select a specific column from space- or tab-separated input:
+
+- `N` is 1-based (first column = 1)
+- If a line has fewer than `N` columns, it is skipped
+- This allows processing TSV/CSV-like data while ignoring the rest of the line
+
+---
 **-l**, --no-legend  
 &emsp;`Do not display the chart legend.`
 
+---
 **-n**, --no-stat  
 &emsp;`Do not display the chart stat.`
 
+---
 **-t** <ins>NUMBER</ins>, --top-value <ins>NUMBER</ins>  
 &emsp;`Maximum value in chart. (upper limit of Y-axis)`
+
+Sets a hard ceiling for displayed values.  
+Any value greater than the specified limit is **clipped** and drawn at the top of the chart.
 
 **-b** <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins>  
 &emsp;`Minimum value in chart. (lower limit of Y-axis)`
 
-**-s** <ins>NUMBER</ins>, --scale <ins>NUMBER</ins>  
-&emsp;`Scale factor to multiply all data values by. (default: 1.0)`
+Same functionality as `-t`, but for the lower boundary.
+
+Useful for:
+- preventing extreme spikes from distorting the scale
+- focusing on the relevant range
+- stabilizing the scale with noisy data
+- creating clean, readable output even with outliers
+
+---
+**-s** <ins>NUMBER</ins>, --shift <ins>NUMBER</ins>  
+&emsp;`Shift the decimal point left or right. (default: 0)`
+
+**uchart** does not use scientific notation or SI prefixes (K, M, G…) in the Y-axis legend.  
+With very large numbers (e.g. raw byte counts), the legend labels would become excessively wide.
+
+To keep labels short and readable, you can **shift the decimal point** across all data values using the `-s` / `--shift` option:
+
+- The number specifies how many places to shift
+
+**Examples:**
+```bash
+uchart -s 3  data.txt      # ×1000  (e.g. bytes → kilobytes)
+uchart -s 6  data.txt      # ×1M    (bytes → megabytes)
+uchart -s -3 data.txt      # ÷1000  (kilobytes → bytes)
+```
+
+
+| Value   | Effect     | Example:          |
+|---------|------------|-------------------|
+| `-s 3`  | ×1000      | 0.012 → 12        |
+| `-s 2`  | ×100       | 0.001 → 0.1       |
+| `-s 0`  | no change  |                   |
+| `-s -1` | ÷10        | 1000 → 100        |
+| `-s -6` | ÷1000000   | 1000000000 → 1000 |
+
+Range: -15 to +15 (10⁻¹⁵ to 10¹⁵)
 
 **-a** <ins>NUMBER</ins>, --add <ins>NUMBER></ins>
 &emsp;`The constant that will be added to each item. (default: 0)`
