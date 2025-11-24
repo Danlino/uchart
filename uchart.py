@@ -5,6 +5,16 @@ import signal
 import sys
 import os
 
+try:
+    "⣾".encode(sys.stdout.encoding)
+    USE_BRAILLE = len("⣾") == 1
+except Exception:
+    USE_BRAILLE = False
+
+if not USE_BRAILLE:
+    print("Warning: Braille patterns not supported.", file=sys.stderr)
+    sys.exit(78)
+
 def _handle_sigint(signum, frame):
     raise KeyboardInterrupt("Ctrl+C")
 
