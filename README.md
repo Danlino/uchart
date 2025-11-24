@@ -2,7 +2,7 @@
 
 # <u>uchart</u>
 
-**Uchart is** a single-file **terminal command** with no dependencies written in Python. It serves **for simple visualization of a chart** from data read from stdin directly in the terminal. For the proper rendering of the chart, UTF-8 character set support is required. Numeric values must be separated by newlines. One number per line expected; other lines skipped. When input lines contain multiple whitespace or tab-separated values, the -c N / --column N option selects the N-th column (1-based) for plotting.
+**Uchart is** a single-file **terminal command** with no dependencies written in Python. It serves **for simple visualization of a chart** from data read from stdin or file directly in the terminal. For the proper rendering of the chart, UTF-8 character set support is required. Numeric values must be separated by newlines. One number per line expected; other lines skipped. When input lines contain multiple whitespace or tab-separated values, the -c N / --column N option selects the N-th column (1-based) for plotting.
 
 
 ```
@@ -103,7 +103,7 @@ Result: the chart is perfectly centered around the ideal 50 Hz (the middle line 
 
 ### Live data preview example
 
-`uchart` is not designed for real-time streaming, but live visualization can be easily achieved using the `watch` command.
+uchart is not designed for real-time streaming, but live visualization can be easily achieved using the `watch` command.
 
 For testing/demo purposes, the following one-liner creates a temporary file `/tmp/pingfile`, fills it with fresh ping latency values every second for one minute, and automatically deletes the file afterwards:
 ```bash
@@ -163,9 +163,9 @@ Lines containing multiple values or non-numeric content are silently skipped.
 
 Use the `-c N` / `--column N` option to select a specific column from space- or tab-separated input:
 
-- `N` is 1-based (first column = 1)
+- N is 1-based (first column = 1)
 - If a line has fewer than `N` columns, it is skipped
-- This allows processing TSV/CSV-like data while ignoring the rest of the line
+
 
 ---
 **-l**, --no-legend  
@@ -197,7 +197,7 @@ Useful for:
 **-s** <ins>NUMBER</ins>, --shift <ins>NUMBER</ins>  
 &emsp;`Shift the decimal point left or right. (default: 0)`
 
-**uchart** does not use scientific notation or SI prefixes (K, M, G…) in the Y-axis legend.  
+uchart does not use scientific notation or SI prefixes (K, M, G…) in the Y-axis legend.  
 With very large numbers (e.g. raw byte counts), the legend labels would become excessively wide.
 
 To keep labels short and readable, you can **shift the decimal point** across all data values using the `-s` / `--shift` option:
@@ -225,11 +225,17 @@ Range: -15 to +15 (10⁻¹⁵ to 10¹⁵)
 **-a** <ins>NUMBER</ins>, --add <ins>NUMBER></ins>
 &emsp;`The constant that will be added to each item. (default: 0)`
 
+Option adds or subtracts a constant from every value.
+
+---
 **-f** <ins>SEP</ins>, --format <ins>SEP</ins>  
 &emsp;`If numbers contain thousands separator, specify it: ',' or '.' (e.g. -f ,)`
 
+Number formatting varies across the world (e.g. 1,234.56 vs 1.234,56).  
+Because of this, uchart cannot always reliably tell which character is the thousands separator and which is the decimal separator.
+
 ---
-Sample data structure in the example.
+Sample data structure in the examples.
 ```sh
 $ head -3 eufr-2025-10.tsv; echo '...'; tail -3 eufr-2025-10.tsv
 2025-10-01 00:00:00	50,04144
