@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 
 import argparse
+import signal
 import sys
 import os
+
+def _handle_sigint(signum, frame):
+    raise KeyboardInterrupt("Ctrl+C")
+
+signal.signal(signal.SIGINT, _handle_sigint)
 
 def get_arg():
     parser = argparse.ArgumentParser()
@@ -12,9 +18,9 @@ def get_arg():
     parser.add_argument('-x', '--width',
                         type=int, default=None, dest='width', metavar='<NUMBER>',
                         help='Maximum chart width in characters.')
-    parser.add_argument('-m', '--merge',
-                        action='store_true',
-                        help='Do not display average multiple values per column; show all points.')
+    parser.add_argument('-m', '--multi',
+                        action='store_true', dest='multi_value',
+                        help='Plot all individual values instead of just the mean.')
     parser.add_argument('-c', '--column',
                         type=int, default=None, dest='column', metavar='<NUMBER>',
                         help='Specifies which field (column) in the input line to use.')
@@ -30,9 +36,9 @@ def get_arg():
     parser.add_argument('-b', '--bottom-value',
                         type=float, default=None, dest='bottomv', metavar='<NUMBER>',
                         help='Minimum value in chart. (lower limit of Y-axis)')
-    parser.add_argument('-s', '--scale',
-                        type=float, default=1.0, dest='scale', metavar='<NUMBER>',
-                        help='The constant that each item will be multiplied by. (default: %(default)s)')
+    parser.add_argument('-s', '--shift',
+                        type=int, default=None, dest='shft', metavar='<NUMBER>',
+                        help='Shift decimal point. (e.g. -6 = ÷1_000_000, 3 = ×1_000)')
     parser.add_argument('-a', '--add',
                         type=float, default=0, dest='addm', metavar='<NUMBER>',
                         help='The constant that will be added to each item. (default: %(default)s)')
@@ -48,17 +54,24 @@ def get_arg():
         sys.exit(0)
     return args
 
+def get_shift_multiplier(shft: int | None) -> float:
+    if shft is None or shft == 0:
+        return 1.0
+    if not -15 <= shft <= 15:
+        return 1.0
+    return 10.0 ** shft
+
 arg = get_arg()
 
 SHOWLEGEND = arg.show_legend
 SHOWSTATS  = arg.show_stat
 YHEIGHT    = arg.height
 XWIDTH     = arg.width
-MERGEM     = arg.merge
+MULTIV     = arg.multi_value
 COLUMN     = arg.column
 TOPVAL     = arg.topv
 DOWNV      = arg.bottomv
-SCALE      = arg.scale
+SHFT       = get_shift_multiplier(arg.shft)
 SEPA       = arg.separator
 ADDM       = arg.addm
 
@@ -68,7 +81,7 @@ COLUMN  = None if COLUMN is not None and COLUMN < 1 else COLUMN
 if TOPVAL is not None and DOWNV is not None and TOPVAL <= DOWNV:
     TOPVAL = DOWNV = None
 
-def get_terminal_width():
+def get_terminal_width() -> int:
     try:
         return os.get_terminal_size().columns
     except:
@@ -110,7 +123,7 @@ def average_values_in_groups(values_list, group_size):
             result.append(sum(group) / len(group))
     return result
 
-def group_values_for_merge(values_list, group_size):
+def group_values_for_multi(values_list, group_size):
     result = []
     for i in range(0, len(values_list), group_size):
         group = values_list[i:i+group_size]
@@ -162,7 +175,7 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
     if SHOWSTATS:
         total_original_values = len(original_raw_values)
         num_plot_columns = len(values_for_plot)
-        if MERGEM:
+        if MULTIV:
             print(f"\n[{total_original_values} values in {num_plot_columns} columns; {compression_factor} values in a column]")
         elif compression_factor == 1:
             print(f"\n[{total_original_values} values]")
@@ -258,7 +271,7 @@ def main():
             line = line.strip().replace(',', '.')
             if line:
                 try:
-                    value = ( float(line) + ADDM ) * SCALE
+                    value = ( float(line) + ADDM ) * SHFT
                     value = TOPVAL if TOPVAL is not None and value > TOPVAL else value
                     value = DOWNV if DOWNV is not None and value < DOWNV else value
                     if len(str(int(value))) > long_numbers:
@@ -291,44 +304,16 @@ def main():
                 if compression_factor == 0: compression_factor = 1
 
             processed_values_for_plot = []
-            if MERGEM:
-                processed_values_for_plot = group_values_for_merge(raw_values, compression_factor)
+            if MULTIV:
+                processed_values_for_plot = group_values_for_multi(raw_values, compression_factor)
             else:
                 processed_values_for_plot = average_values_in_groups(raw_values, compression_factor)
 
             draw_graph(processed_values_for_plot, raw_values, compression_factor, long_numbers, long_floatpa)
 
     except KeyboardInterrupt:
-        if long_numbers < 6:
-            long_floatpa = 8 - long_numbers
-            long_numbers = 6
-        else:
-            long_floatpa = 2
-
-        if raw_values:
-            if XWIDTH is not None and XWIDTH > 0 and XWIDTH < get_terminal_width() - (long_numbers + 4):
-                term_width = XWIDTH + 17 + long_numbers
-            else:
-                term_width = get_terminal_width() - long_numbers - 4
-
-            legend_width = 17 if SHOWLEGEND else 0
-            available_braille_chars = term_width - legend_width - 2 - long_numbers
-            if available_braille_chars < 1:
-                available_braille_chars = 1
-            max_data_columns = available_braille_chars * 2
-            compression_factor = 1
-
-            if len(raw_values) > max_data_columns:
-                compression_factor = (len(raw_values) + max_data_columns - 1) // max_data_columns
-                if compression_factor == 0: compression_factor = 1
-
-            processed_values_for_plot = []
-            if MERGEM:
-                processed_values_for_plot = group_values_for_merge(raw_values, compression_factor)
-            else:
-                processed_values_for_plot = average_values_in_groups(raw_values, compression_factor)
-
-            draw_graph(processed_values_for_plot, raw_values, compression_factor, long_numbers, long_floatpa)
+        print(f'\nAfter loading {len(raw_values)} values, it was interrupted by the user.', file=sys.stderr)
+        sys.exit(130)
 
     finally:
         if datain is not sys.stdin:
