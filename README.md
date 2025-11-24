@@ -1,4 +1,5 @@
 ![logo](images/logo.png)
+&emsp;&emsp;[install](#installation)&emsp;&emsp;[usage](#usage)
 
 # <u>uchart</u>
 
@@ -126,7 +127,8 @@ curl -fsSL https://raw.githubusercontent.com/Danlino/uchart/main/install.sh | ba
 ```
 
 ---
-<u>**USAGE:**</u> &emsp;uchart [**-h**] [**-y** <NUMBER>] [**-x** <NUMBER>] [**-m**] [**-l**] [**-n**] [**-t** <NUMBER>] [**-b** <NUMBER>] [**-s** <NUMBER>] [**-a** <NUMBER>] [**-f** SEP] [file]
+### USAGE:
+&emsp;uchart [**-h**] [**-y** <NUMBER>] [**-x** <NUMBER>] [**-m**] [**-l**] [**-n**] [**-t** <NUMBER>] [**-b** <NUMBER>] [**-s** <NUMBER>] [**-a** <NUMBER>] [**-f** SEP] [file]
 
 _**positional arguments:**_  
 **file**  
