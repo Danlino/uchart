@@ -120,6 +120,11 @@ This keeps a common Y-axis range and makes the charts visually comparable.
 
 ![multi-chart](images/multichart.png)
 
+## Installation
+```bash
+curl -fsSL https://raw.githubusercontent.com/Danlino/uchart/main/install.sh | bash
+```
+
 ---
 <u>**USAGE:**</u> &emsp;uchart [**-h**] [**-y** <NUMBER>] [**-x** <NUMBER>] [**-m**] [**-l**] [**-n**] [**-t** <NUMBER>] [**-b** <NUMBER>] [**-s** <NUMBER>] [**-a** <NUMBER>] [**-f** SEP] [file]
 
