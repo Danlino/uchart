@@ -82,6 +82,8 @@ The value itself specifies how many places to shift.
 Additionally, the `-a` / `--add` option adds or subtracts a constant from every value.  
 This is especially useful for moving a reference value (e.g. the nominal 50 Hz mains frequency) to zero so deviations are easier to read.
 
+- uchart always performs the addition/subtraction first and only afterwards moves/shifts the decimal point.
+
 ##### Example: Display mains frequency deviation in millihertz (centered around 50 Hz)
 
 ```
@@ -229,6 +231,9 @@ uchart -s -3 data.txt      # ÷1000  (kilobytes → bytes)
 
 Range: -15 to +15 (10⁻¹⁵ to 10¹⁵)
 
+- If the entered value is outside this range, the option will be automatically disabled and will have no effect.
+
+---
 **-a** <ins>NUMBER</ins>, --add <ins>NUMBER></ins>
 &emsp;`The constant that will be added to each item. (default: 0)`
 
