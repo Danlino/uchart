@@ -86,7 +86,7 @@ SEPA       = arg.separator
 ADDM       = arg.addm
 
 YHEIGHT = 2 if YHEIGHT is not None and YHEIGHT < 2 else YHEIGHT
-XWIDTH  = None if XWIDTH is not None and YHEIGHT < 1 else XWIDTH
+XWIDTH  = None if XWIDTH is not None and XWIDTH < 1 else XWIDTH
 COLUMN  = None if COLUMN is not None and COLUMN < 1 else COLUMN
 if TOPVAL is not None and DOWNV is not None and TOPVAL <= DOWNV:
     TOPVAL = DOWNV = None
@@ -165,7 +165,10 @@ def reducef(p: list[str], f: int) -> int:
     return min(max_needed, f)
 
 def am_digit(p: list[str]) -> int:
-    return max((len(s.split('.')[0]) for s in p), default=0)
+    return max((len(s.replace('-', '').split('.')[0]) for s in p), default=0)
+
+def negat(p: list[str]) -> bool:
+    return any(s.startswith('-0.') for s in p)
 
 def draw_graph(values_for_plot, original_raw_values, compression_factor, long_numbers, long_floatpa):
     if not values_for_plot:
@@ -212,15 +215,16 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
         vall = [f"{legend_values[row]:.{zend}f}" for row in range(YHEIGHT)]
         zend = reducef(vall, zend)
         zend = 1 if zend < 1 and am_digit(vall) < 4 else zend
+        nega = 1 if negat(vall) and zend == 7 else 0
 
     for row in range(YHEIGHT):
         line = ""
         if SHOWLEGEND:
             lg = legend_values[row]
             if all( c in '0.-' for c in f"{lg:.{zend}f}" ):
-                line += f"{'':{long_numbers+2}}0 │"
+                line += f"{'':{nega+long_numbers+2}}0 │"
             else:
-                line += f"{lg:>{3+long_numbers}.{zend}f} │"
+                line += f"{lg:>{3+nega+long_numbers}.{zend}f} │"
 
         for i in range(0, len(values_for_plot), 2):
             dots = [False] * 8
@@ -249,12 +253,13 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
 
     if SHOWLEGEND:
         num_braille_chars = (len(values_for_plot) + 1) // 2
-        print(f"{'':>{long_numbers+3}} └{'─' * num_braille_chars}")
+        print(f"{'':>{nega+long_numbers+3}} └{'─' * num_braille_chars}")
 
 def main():
     args = get_arg()
     raw_values = []
     long_numbers = 0
+    long_floatpa = 2
 
     if not sys.stdin.isatty():
         datain = sys.stdin
@@ -293,17 +298,14 @@ def main():
         if long_numbers < 6:
             long_floatpa = 8 - long_numbers
             long_numbers = 6
-        else:
-            long_floatpa = 2
 
         if raw_values:
-            if XWIDTH is not None and XWIDTH > 0 and XWIDTH < get_terminal_width() - (long_numbers + 4):
-                term_width = XWIDTH + 17 + long_numbers
+            if XWIDTH is not None and XWIDTH < get_terminal_width() - (long_numbers + 1 + long_floatpa + 2 + 2):
+                term_width = XWIDTH
             else:
-                term_width = get_terminal_width() - long_numbers - 4
+                term_width = get_terminal_width() - (long_numbers + 1 + long_floatpa + 2 + 2)
 
-            legend_width = 17 if SHOWLEGEND else 0
-            available_braille_chars = term_width - legend_width - 2 - long_numbers
+            available_braille_chars = term_width if SHOWLEGEND else get_terminal_width() - 2
             if available_braille_chars < 1:
                 available_braille_chars = 1
             max_data_columns = available_braille_chars * 2
