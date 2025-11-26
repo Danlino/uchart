@@ -124,6 +124,7 @@ This keeps a common Y-axis range and makes the charts visually comparable.
 ![multi-chart](images/multichart.png)
 
 ## Installation
+Linux
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Danlino/uchart/main/install.sh | bash
 ```
