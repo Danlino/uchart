@@ -1,7 +1,7 @@
 ![logo](images/logo.png)
 &emsp;&emsp;[install](#installation)&emsp;&emsp;[usage](#usage)
 
-# <u>uchart</u>
+# <u>uChart</u>
 
 **Uchart is** a single-file **terminal command** with no dependencies written in Python. It serves **for simple visualization of a chart** from data read from stdin or file directly in the terminal. For the proper rendering of the chart, UTF-8 character set support is required. Numeric values must be separated by newlines. One number per line expected; other lines skipped. When input lines contain multiple whitespace or tab-separated values, the -c N / --column N option selects the N-th column (1-based) for plotting.
 
