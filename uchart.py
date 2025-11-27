@@ -4,6 +4,7 @@ import argparse
 import signal
 import sys
 import os
+import re
 
 try:
     "⣾".encode(sys.stdout.encoding)
@@ -141,6 +142,151 @@ def group_values_for_multi(values_list, group_size):
             result.append(group)
     return result
 
+def axis_data(g: list[str], c: int, a: dict) -> None:
+
+    if 1 <= c <= 10 and a['s'] is False:
+        amd = [i for i, item in enumerate(g) if re.fullmatch(r'^\d{4}-\d{2}-\d{2}', item)]
+        if len(amd) == 1:
+            a['d']['cl'] = amd[0]
+            a['d']['fs'] = a['d']['ls'] = g[amd[0]]
+            a['s'] = True
+        amt = [i for i, item in enumerate(g) if re.fullmatch(r'^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$', item)]
+        if len(amt) == 1:
+            a['t']['cl'] = amt[0]
+            a['t']['fs'] = a['t']['ls'] = g[amt[0]]
+            a['s'] = True
+        if c == 10:
+            a['u'] = False
+
+    if a['d']['ls'] is not None:
+        if g[a['d']['cl']] != a['d']['ls']:
+            if g[a['d']['cl']][0:4] != a['d']['ls'][0:4]:
+                if a['i']['y']: a['d']['y'].append(c)
+                if a['i']['m']: a['d']['m'].append(c)
+                if a['i']['d']: a['d']['d'].append(c)
+            elif g[a['d']['cl']][5:7] != a['d']['ls'][5:7]:
+                if a['i']['m']: a['d']['m'].append(c)
+                if a['i']['d']: a['d']['d'].append(c)
+            elif g[a['d']['cl']][8:10] != a['d']['ls'][8:10]:
+                if a['i']['d']: a['d']['d'].append(c)
+            a['d']['ls'] = g[a['d']['cl']]
+
+    if a['t']['ls'] is not None:
+        if g[a['t']['cl']] != a['t']['ls']:
+            if g[a['t']['cl']][0:2] != a['t']['ls'][0:2]:
+                if a['i']['H']: a['t']['H'].append(c)
+                if a['i']['M']: a['t']['M'].append(c)
+                if a['i']['S']: a['t']['S'].append(c)
+            elif g[a['t']['cl']][3:5] != a['t']['ls'][3:5]:
+                if a['i']['M']: a['t']['M'].append(c)
+                if a['i']['S']: a['t']['S'].append(c)
+            elif g[a['t']['cl']][6:8] != a['t']['ls'][6:8]:
+                if a['i']['S']: a['t']['S'].append(c)
+            a['t']['ls'] = g[a['t']['cl']]
+
+    if c%10 == 0:
+
+        if a['t']['cl'] is not None:
+            if len(a['t']['S']) > a['m']:
+                a['t']['S'] = []
+                a['i']['S'] = False
+
+            if len(a['t']['M']) > a['m']:
+                a['t']['M'] = []
+                a['i']['M'] = False
+
+            if len(a['t']['H']) > a['m']:
+                a['t']['H'] = []
+                a['i']['H'] = False
+
+        if a['d']['cl'] is not None:
+            if len(a['d']['d']) > a['m']:
+                a['d']['d'] = []
+                a['i']['d'] = False
+
+            if len(a['d']['m']) > a['m']:
+                a['d']['m'] = []
+                a['i']['m'] = False
+
+            if len(a['d']['y']) > a['m']:
+                a['d']['y'] = []
+                a['i']['y'] = False
+
+        if a['d']['cl'] is not None:
+            if not re.fullmatch(r'^\d{4}-\d{2}-\d{2}', g[a['d']['cl']]):
+                a['e'] += 1
+            
+        if a['t']['cl'] is not None:
+            if not re.fullmatch(r'^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$', g[a['t']['cl']]):
+                a['e'] += 1
+        
+        if a['e'] > 3:
+            a['u'] = False
+            return None
+
+        if c%100 == 0:
+
+            if a['d']['cl'] is not None:
+                if not any( (a['i']['y'], a['i']['m'], a['i']['d'])):
+                    a['d'] = { 'cl':None, 'fs': None, 'ls': None, 'y':[], 'm':[], 'd':[] }
+
+            if a['t']['cl'] is not None:
+                if not any( (a['i']['H'], a['i']['M'], a['i']['S'])):
+                    a['t'] = { 'cl':None, 'fs': None, 'ls': None, 'H':[], 'M':[], 'S':[] }
+    return None
+
+def print_x_legend(a: dict, l: int, b: int, c: int) -> None:
+
+    if b < 10:
+        print(f"{'':>{l}} └{'─' * b}")
+        return None
+          
+    ml = int(b * 0.5)
+
+    x = { k: a['d' if k in 'ymd' else 't'][k]
+          for k in 'ymdHMS'
+          if 0 < len(a['d' if k in 'ymd' else 't'][k]) < ml }         
+
+    if len(x) == 0:
+        print(f"{'':>{l}} └{'─' * b}")
+        return None
+    
+    if len(x) > 1:
+        lkey = max(x, key=lambda k: len(x[k]))
+        x = {lkey: x[lkey]}
+    else:
+        lkey = list(x.keys())[0]
+
+    lege = {'y': 'years >  ',
+            'm': 'months > ',
+            'd': 'days >   ',
+            'H': 'hours >  ',
+            'M': 'minutes >',
+            'S': 'seconds >'}
+
+    positions = x[lkey]
+    total_braille_cols = 2 * b
+
+    line = [' '] * b
+
+    for pos in positions:
+        col = pos // c
+        if col >= total_braille_cols:
+            continue
+
+        term_col = col // 2
+        is_right = col % 2
+
+        bit = 1 << (0 if not is_right else 3)
+
+        current = ord(line[term_col]) - 0x2800 if line[term_col] != ' ' else 0
+        new_val = current | bit
+        line[term_col] = chr(0x2800 + new_val)
+
+    linex = ''.join(line)
+    print(f"{lege[lkey]}{'':>{l-9}} └{'─' * b}")
+    print(f"{'':>{l+2}}{linex}")
+
 def reducef(p: list[str], f: int) -> int:
     if len(p) < 2:
         return f
@@ -170,7 +316,7 @@ def am_digit(p: list[str]) -> int:
 def negat(p: list[str]) -> bool:
     return any(s.startswith('-0.') for s in p)
 
-def draw_graph(values_for_plot, original_raw_values, compression_factor, long_numbers, long_floatpa):
+def draw_graph(values_for_plot, original_raw_values, compression_factor, long_numbers, long_floatpa, axisx):
     if not values_for_plot:
         return
 
@@ -253,13 +399,26 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
 
     if SHOWLEGEND:
         num_braille_chars = (len(values_for_plot) + 1) // 2
-        print(f"{'':>{nega+long_numbers+3}} └{'─' * num_braille_chars}")
+
+        if axisx['u']:
+            print_x_legend(axisx, nega+long_numbers+3, num_braille_chars, compression_factor)
+        else:
+            print(f"{'':>{nega+long_numbers+3}} └{'─' * num_braille_chars}")
+
 
 def main():
     args = get_arg()
     raw_values = []
     long_numbers = 0
     long_floatpa = 2
+    counter = 1
+    axisx = { 'u':True, 
+              's':False,
+              'e': 0,
+              'm': get_terminal_width() if XWIDTH is None else XWIDTH,
+              'd':{ 'cl':None, 'fs': None, 'ls': None, 'y':[], 'm':[], 'd':[] },
+              't':{ 'cl':None, 'fs': None, 'ls': None, 'H':[], 'M':[], 'S':[] },
+              'i':{ k: True for k in ['y', 'm', 'd', 'H', 'M', 'S']}}
 
     if not sys.stdin.isatty():
         datain = sys.stdin
@@ -292,6 +451,9 @@ def main():
                     if len(str(int(value))) > long_numbers:
                         long_numbers = len(str(int(value)))
                     raw_values.append(value)
+                    if axisx['u'] and COLUMN:
+                        axis_data(fields, counter, axisx)
+                        counter += 1
                 except ValueError:
                     continue
 
@@ -315,13 +477,13 @@ def main():
                 compression_factor = (len(raw_values) + max_data_columns - 1) // max_data_columns
                 if compression_factor == 0: compression_factor = 1
 
-            processed_values_for_plot = []
+            val_for_plot = []
             if MULTIV:
-                processed_values_for_plot = group_values_for_multi(raw_values, compression_factor)
+                val_for_plot = group_values_for_multi(raw_values, compression_factor)
             else:
-                processed_values_for_plot = average_values_in_groups(raw_values, compression_factor)
+                val_for_plot = average_values_in_groups(raw_values, compression_factor)
 
-            draw_graph(processed_values_for_plot, raw_values, compression_factor, long_numbers, long_floatpa)
+            draw_graph(val_for_plot, raw_values, compression_factor, long_numbers, long_floatpa, axisx)
 
     except KeyboardInterrupt:
         print(f'\nAfter loading {len(raw_values)} values, it was interrupted by the user.', file=sys.stderr)
