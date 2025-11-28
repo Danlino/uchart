@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from glob import glob
 import argparse
 import signal
 import sys
@@ -56,7 +57,7 @@ def get_arg():
     parser.add_argument('-f', '--format',
                         type=str, choices=[',', '.'], dest='separator', default=None, metavar='SEP',
                         help="If numbers contain thousands separator, specify it: ',' or '.' (e.g. -f ,)")
-    parser.add_argument('file', nargs='?', default=None,
+    parser.add_argument('file', nargs='*', default=None,
                         help='The input data file, if not specified, is read from stdin.')
     args = parser.parse_args()
 
@@ -419,20 +420,30 @@ def main():
               'd':{ 'cl':None, 'fs': None, 'ls': None, 'y':[], 'm':[], 'd':[] },
               't':{ 'cl':None, 'fs': None, 'ls': None, 'H':[], 'M':[], 'S':[] },
               'i':{ k: True for k in ['y', 'm', 'd', 'H', 'M', 'S']}}
-
+    
+    # 1. pipe
     if not sys.stdin.isatty():
         datain = sys.stdin
-    elif args.file and args.file != '-':
-        try:
-            datain = open(args.file, 'r', encoding='utf-8')
-        except FileNotFoundError:
-            print(f"Error: file '{args.file}' not found.", file=sys.stderr)
-            sys.exit(1)
-        except PermissionError:
-            print(f"Error: no permission to read file '{args.file}'.", file=sys.stderr)
-            sys.exit(1)
+
+    # 2. file or files
     else:
-        datain = sys.stdin
+        file_list = []
+        for pattern in args.file or []:
+            matches = glob(pattern)
+            file_list.extend(matches if matches else [pattern])
+
+        if not file_list:
+            datain = sys.stdin
+
+        else:
+            # We open the first file (or more – but as one stream)
+            def multi_file_stream(files):
+                for f_path in files:
+                    with open(f_path, 'r', encoding='utf-8') as f:
+                        yield from f
+
+            datain = multi_file_stream(file_list)
+            print(f"{len(file_list)} files: {', '.join(file_list)}", file=sys.stderr)
 
     try:
         for line in datain:
@@ -490,8 +501,11 @@ def main():
         sys.exit(130)
 
     finally:
-        if datain is not sys.stdin:
-            datain.close()
+        if hasattr(datain, 'close') and datain is not sys.stdin:
+            try:
+                datain.close()
+            except:
+                pass  # it is already closed
 
 if __name__ == "__main__":
     main()
