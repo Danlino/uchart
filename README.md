@@ -3,8 +3,31 @@
 
 # <u>uChart</u>
 
-**Uchart is** a single-file **terminal command** with no dependencies written in Python. It serves **for simple visualization of a chart** from data read from stdin or file directly in the terminal. For the proper rendering of the chart, UTF-8 character set support is required. Numeric values must be separated by newlines. One number per line expected; other lines skipped. When input lines contain multiple whitespace or tab-separated values, the -c N / --column N option selects the N-th column (1-based) for plotting.
+**Uchart** is a zero-dependency, single-file Python script that instantly plots simple terminal charts from numeric data.
 
+It reads data from **standard input (stdin)** or directly from one or more **files** given as positional arguments.  
+You can also pass a filename pattern (shell glob/wildcard) – uchart will automatically use data from all matching files.
+
+Terminal requirements: UTF-8 and Unicode support (standard in all modern terminals).
+
+**Data format**
+- By default it expects **one number per line**; non-numeric lines are silently ignored.
+- When lines contain multiple whitespace- or tab-separated columns, use `-c N` / `--column N` (1-based index) to select which column to plot.
+
+**Examples of command usage**
+```bash
+# From stdin
+$ cat data.txt | uchart
+
+# Single file
+$ uchart measurements.log
+
+# All matching files via glob pattern
+$ uchart logs/access-2025-*.log
+
+# Plot the 3rd column from tab/whitespace-separated logs
+$ uchart -c 3 access.log
+```
 
 ```
 $ seq -20 40 | uchart
@@ -87,23 +110,27 @@ This is especially useful for moving a reference value (e.g. the nominal 50 Hz m
 ##### Example: Display mains frequency deviation in millihertz (centered around 50 Hz)
 
 ```
-uchart -c3 -a-50 -s3 -b-150 -t150 -m eufr-2025-10.tsv
+uchart -y11 -c3 -m a-50 -s3 -b-150 -t150 eufr-2025-10.tsv
 ```
 
-| Switch   | Meaning                                                                 | Result after transformation |
-|----------|--------------------------------------------------------------------------|----------------------------|
-| `-c3`    | Use 3rd column of the file                                           | e.g. 50.012 Hz             |
-| `-a -50` | Subtract 50 from every value                                             | → 0.012 Hz                 |
-| `-s 3`   | Multiply every value by 1000                                              | → 12 mHz                   |
-| `-b -150`| Fixed bottom boundary of the chart                                       | -150 mHz                   |
-| `-t 150` | Fixed top boundary of the chart                                          | +150 mHz                   |
-| `-m`     | show all points              | –                          |
+| Switch   | Meaning                             | Result after transformation |
+|----------|-------------------------------------|-----------------------------|
+| `-y11`   | Chart height in characters          | –                           |
+| `-c3`    | Use 3rd column of the file          | e.g. 50.012 Hz              |
+| `-m`     | show all points                     | –                           |
+| `-a -50` | Subtract 50 from every value        | → 0.012 Hz                  |
+| `-s 3`   | Multiply every value by 1000        | → 12 mHz                    |
+| `-b -150`| Fixed bottom boundary of the chart  | -150 mHz                    |
+| `-t 150` | Fixed top boundary of the chart     | +150 mHz                    |
 
 Result: the chart is perfectly centered around the ideal 50 Hz (the middle line = 0 mHz) and shows frequency deviation in millihertz with a symmetric ±150 mHz range.
 
 ![ex1](images/frequency.png)
 
+### X-axis labels
+When the `-c` switch is used to select the column to be visualized, uchart attempts to find a timestamp in the remaining columns. If it successfully identifies one, it intelligently places tick marks (dots) below the X-axis. These marks represent the boundaries of the most appropriate time interval — for example, the start of a day, month, and so on. If no timestamp is found within the first ten rows, or if the timestamps later disappear from the data, uchart will stop trying to use this smart labeling behavior.
 
+---
 ### Live data preview example
 
 uchart is not designed for real-time streaming, but live visualization can be easily achieved using the `watch` command.
