@@ -14,19 +14,19 @@ Terminal requirements: UTF-8 and Unicode support (standard in all modern termina
 - By default it expects **one number per line**; non-numeric lines are silently ignored.
 - When lines contain multiple whitespace- or tab-separated columns, use `-c N` / `--column N` (1-based index) to select which column to plot.
 
-**Examples of command usage**
-```bash
+**Sample input data for the command.**
+```markdown
 # From stdin
-$ cat data.txt | uchart
+cat data.txt | **uchart**
 
 # Single file
-$ uchart measurements.log
+**uchart** measurements.log
 
 # All matching files via glob pattern
-$ uchart logs/access-2025-*.log
+**uchart** logs/*.log
 
 # Plot the 3rd column from tab/whitespace-separated logs
-$ uchart -c 3 access.log
+**uchart** -c3 access-2025*.log
 ```
 
 ```
