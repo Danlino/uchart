@@ -1,33 +1,22 @@
 ![logo](images/logo.png)
 &emsp;&emsp;[install](#installation)&emsp;&emsp;[usage](#usage)
 
-# <u>uChart</u>
+### What <u>uChart</u> is
+- tiny CLI tool for quick charts in the terminal  
+- zero dependencies, single Python script  
+- works on any server you can ssh into  
 
-**Uchart** is a zero-dependency, single-file Python script that instantly plots simple terminal charts from numeric data.
 
-It reads data from **standard input (stdin)** or directly from one or more **files** given as positional arguments.  
+It reads data from **standard input (stdin)** or directly from **files** given as positional arguments.  
+
 You can also pass a filename pattern (shell glob/wildcard) – uchart will automatically use data from all matching files.
 
 Terminal requirements: UTF-8 and Unicode support (standard in all modern terminals).
 
 **Data format**
 - By default it expects **one number per line**; non-numeric lines are silently ignored.
-- When lines contain multiple whitespace- or tab-separated columns, use `-c N` / `--column N` (1-based index) to select which column to plot.
+- When lines contain **multiple** whitespace- or tab-separated columns, use `-c N` / `--column N` (1-based index) to select which column to plot.
 
-**Sample input data for the command.**
-```markdown
-# From stdin
-cat data.txt | uchart
-
-# Single file
-uchart measurements.log
-
-# All matching files via glob pattern
-uchart logs/*.log
-
-# Plot the 3rd column from tab/whitespace-separated logs
-uchart -c3 access-2025*.log
-```
 
 ```
 $ seq -20 40 | uchart
