@@ -443,7 +443,6 @@ def main():
                         yield from f
 
             datain = multi_file_stream(file_list)
-            print(f"{len(file_list)} files: {', '.join(file_list)}", file=sys.stderr)
 
     try:
         for line in datain:
