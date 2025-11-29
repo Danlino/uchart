@@ -15,7 +15,7 @@ Terminal requirements: UTF-8 and Unicode support (standard in all modern termina
 - When lines contain multiple whitespace- or tab-separated columns, use `-c N` / `--column N` (1-based index) to select which column to plot.
 
 **Sample input data for the command.**
-```markdown
+```
 # From stdin
 cat data.txt | **uchart**
 
