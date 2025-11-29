@@ -15,18 +15,18 @@ Terminal requirements: UTF-8 and Unicode support (standard in all modern termina
 - When lines contain multiple whitespace- or tab-separated columns, use `-c N` / `--column N` (1-based index) to select which column to plot.
 
 **Sample input data for the command.**
-```
+```markdown
 # From stdin
-cat data.txt | **uchart**
+cat data.txt | uchart
 
 # Single file
-**uchart** measurements.log
+uchart measurements.log
 
 # All matching files via glob pattern
-**uchart** logs/*.log
+uchart logs/*.log
 
 # Plot the 3rd column from tab/whitespace-separated logs
-**uchart** -c3 access-2025*.log
+uchart -c3 access-2025*.log
 ```
 
 ```
