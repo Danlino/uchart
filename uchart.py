@@ -66,12 +66,12 @@ def get_arg():
         sys.exit(0)
     return args
 
-def get_shift_multiplier(shft: int | None) -> float:
+def get_shift(shft: int | None) -> float | int:
     if shft is None or shft == 0:
-        return 1.0
+        return 1
     if not -15 <= shft <= 15:
-        return 1.0
-    return 10.0 ** shft
+        return 1
+    return 10 ** shft
 
 arg = get_arg()
 
@@ -83,7 +83,7 @@ MULTIV     = arg.multi_value
 COLUMN     = arg.column
 TOPVAL     = arg.topv
 DOWNV      = arg.bottomv
-SHFT       = get_shift_multiplier(arg.shft)
+SHFT       = get_shift(arg.shft)
 SEPA       = arg.separator
 ADDM       = arg.addm
 
@@ -92,6 +92,20 @@ XWIDTH  = None if XWIDTH is not None and XWIDTH < 1 else XWIDTH
 COLUMN  = None if COLUMN is not None and COLUMN < 1 else COLUMN
 if TOPVAL is not None and DOWNV is not None and TOPVAL <= DOWNV:
     TOPVAL = DOWNV = None
+
+LEGEND = {'y': 'years >  ',
+          'm': 'months > ',
+          'd': 'days >   ',
+          'H': 'hours >  ',
+          'M': 'minutes >',
+          'S': 'seconds >',}
+
+ISO_PARTS = [(0,  4, "y"),
+             (5,  7, "m"),
+             (8, 10, "d"),
+             (11,13, "H"),
+             (14,16, "M"),
+             (17,19, "S"),]
 
 def get_terminal_width() -> int:
     try:
@@ -145,95 +159,127 @@ def group_values_for_multi(values_list, group_size):
 
 def axis_data(g: list[str], c: int, a: dict) -> None:
 
-    if 1 <= c <= 10 and a['s'] is False:
-        amd = [i for i, item in enumerate(g) if re.fullmatch(r'^\d{4}-\d{2}-\d{2}', item)]
-        if len(amd) == 1:
-            a['d']['cl'] = amd[0]
-            a['d']['fs'] = a['d']['ls'] = g[amd[0]]
-            a['s'] = True
-        amt = [i for i, item in enumerate(g) if re.fullmatch(r'^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$', item)]
-        if len(amt) == 1:
-            a['t']['cl'] = amt[0]
-            a['t']['fs'] = a['t']['ls'] = g[amt[0]]
-            a['s'] = True
-        if c == 10:
+    if 1 <= c <= 11 and a['s'] is False:
+
+        if c == 11:
             a['u'] = False
+        else:
+            amx = [i for i, item in enumerate(g) if re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', item)]
+            if len(amx) == 1:
+                a['x']['cl'] = amx[0]
+                a['x']['fs'] = a['x']['ls'] = g[amx[0]][0:19]
+                a['s'] = True
 
-    if a['d']['ls'] is not None:
-        if g[a['d']['cl']] != a['d']['ls']:
-            if g[a['d']['cl']][0:4] != a['d']['ls'][0:4]:
-                if a['i']['y']: a['d']['y'].append(c)
-                if a['i']['m']: a['d']['m'].append(c)
-                if a['i']['d']: a['d']['d'].append(c)
-            elif g[a['d']['cl']][5:7] != a['d']['ls'][5:7]:
-                if a['i']['m']: a['d']['m'].append(c)
-                if a['i']['d']: a['d']['d'].append(c)
-            elif g[a['d']['cl']][8:10] != a['d']['ls'][8:10]:
-                if a['i']['d']: a['d']['d'].append(c)
-            a['d']['ls'] = g[a['d']['cl']]
+            else:
 
-    if a['t']['ls'] is not None:
-        if g[a['t']['cl']] != a['t']['ls']:
-            if g[a['t']['cl']][0:2] != a['t']['ls'][0:2]:
-                if a['i']['H']: a['t']['H'].append(c)
-                if a['i']['M']: a['t']['M'].append(c)
-                if a['i']['S']: a['t']['S'].append(c)
-            elif g[a['t']['cl']][3:5] != a['t']['ls'][3:5]:
-                if a['i']['M']: a['t']['M'].append(c)
-                if a['i']['S']: a['t']['S'].append(c)
-            elif g[a['t']['cl']][6:8] != a['t']['ls'][6:8]:
-                if a['i']['S']: a['t']['S'].append(c)
-            a['t']['ls'] = g[a['t']['cl']]
+                amd = [i for i, item in enumerate(g) if re.match(r'^\d{4}-\d{2}-\d{2}', item)]
+                if len(amd) == 1:
+                    a['d']['cl'] = amd[0]
+                    a['d']['fs'] = a['d']['ls'] = g[amd[0]]
+                    a['s'] = True
+
+                amt = [i for i, item in enumerate(g) if re.match(r'^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$', item)]
+                if len(amt) == 1:
+                    a['t']['cl'] = amt[0]
+                    a['t']['fs'] = a['t']['ls'] = g[amt[0]]
+                    a['s'] = True
+
+    if a['x']['cl'] is not None:
+        if g[a['x']['cl']][0:19] != a['x']['ls']:
+            toend = False
+            for s1, s2, l in ISO_PARTS:
+                if toend:
+                    if a['i'][l]:
+                        a['x'][l].append(c)
+                else:
+                    if a['x']['ls'][s1:s2] != g[a['x']['cl']][s1:s2]:
+                        if a['i'][l]:
+                            a['x'][l].append(c)
+                        toend = True
+            if toend:
+                a['x']['ls'] = g[a['x']['cl']][0:19] 
+
+    else:
+        if a['d']['ls'] is not None:
+            if g[a['d']['cl']] != a['d']['ls']:
+                if g[a['d']['cl']][0:4] != a['d']['ls'][0:4]:
+                    if a['i']['y']: a['d']['y'].append(c)
+                    if a['i']['m']: a['d']['m'].append(c)
+                    if a['i']['d']: a['d']['d'].append(c)
+                elif g[a['d']['cl']][5:7] != a['d']['ls'][5:7]:
+                    if a['i']['m']: a['d']['m'].append(c)
+                    if a['i']['d']: a['d']['d'].append(c)
+                elif g[a['d']['cl']][8:10] != a['d']['ls'][8:10]:
+                    if a['i']['d']: a['d']['d'].append(c)
+                a['d']['ls'] = g[a['d']['cl']]
+
+        if a['t']['ls'] is not None:
+            if g[a['t']['cl']] != a['t']['ls']:
+                if g[a['t']['cl']][0:2] != a['t']['ls'][0:2]:
+                    if a['i']['H']: a['t']['H'].append(c)
+                    if a['i']['M']: a['t']['M'].append(c)
+                    if a['i']['S']: a['t']['S'].append(c)
+                elif g[a['t']['cl']][3:5] != a['t']['ls'][3:5]:
+                    if a['i']['M']: a['t']['M'].append(c)
+                    if a['i']['S']: a['t']['S'].append(c)
+                elif g[a['t']['cl']][6:8] != a['t']['ls'][6:8]:
+                    if a['i']['S']: a['t']['S'].append(c)
+                a['t']['ls'] = g[a['t']['cl']]
 
     if c%10 == 0:
 
-        if a['t']['cl'] is not None:
-            if len(a['t']['S']) > a['m']:
-                a['t']['S'] = []
-                a['i']['S'] = False
+        if a['x']['cl'] is not None:
+            for i in ['y','m','d','H','M','S']:
+                if len(a['x'][i]) > a['m']:
+                    a['x'][i] = []
+                    a['i'][i] = False
 
-            if len(a['t']['M']) > a['m']:
-                a['t']['M'] = []
-                a['i']['M'] = False
+        else:
 
-            if len(a['t']['H']) > a['m']:
-                a['t']['H'] = []
-                a['i']['H'] = False
+            if a['t']['cl'] is not None:
+                for i in ['H','M','S']:
+                    if len(a['t'][i]) > a['m']:
+                        a['t'][i] = []
+                        a['i'][i] = False
 
-        if a['d']['cl'] is not None:
-            if len(a['d']['d']) > a['m']:
-                a['d']['d'] = []
-                a['i']['d'] = False
+            if a['d']['cl'] is not None:
+                for i in ['y','m','d']:
+                    if len(a['d'][i]) > a['m']:
+                        a['d'][i] = []
+                        a['i'][i] = False
 
-            if len(a['d']['m']) > a['m']:
-                a['d']['m'] = []
-                a['i']['m'] = False
-
-            if len(a['d']['y']) > a['m']:
-                a['d']['y'] = []
-                a['i']['y'] = False
 
         if a['d']['cl'] is not None:
-            if not re.fullmatch(r'^\d{4}-\d{2}-\d{2}', g[a['d']['cl']]):
+            if not re.match(r'^\d{4}-\d{2}-\d{2}', g[a['d']['cl']]):
                 a['e'] += 1
-            
+
         if a['t']['cl'] is not None:
-            if not re.fullmatch(r'^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$', g[a['t']['cl']]):
+            if not re.match(r'^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$', g[a['t']['cl']]):
                 a['e'] += 1
-        
+
+        if a['x']['cl'] is not None:
+            if not re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', g[a['x']['cl']]):
+                a['e'] += 1
+
         if a['e'] > 3:
             a['u'] = False
+
             return None
 
         if c%100 == 0:
 
             if a['d']['cl'] is not None:
-                if not any( (a['i']['y'], a['i']['m'], a['i']['d'])):
+                if not any( a['i'][k] for k in "ymd" ):
                     a['d'] = { 'cl':None, 'fs': None, 'ls': None, 'y':[], 'm':[], 'd':[] }
 
             if a['t']['cl'] is not None:
-                if not any( (a['i']['H'], a['i']['M'], a['i']['S'])):
+                if not any( a['i'][k] for k in "HMS" ):
                     a['t'] = { 'cl':None, 'fs': None, 'ls': None, 'H':[], 'M':[], 'S':[] }
+
+            if a['x']['cl'] is not None:
+                if not any( a['i'][k] for k in "ymdHMS" ):
+                    a['t'] = { 'cl':None, 'fs':None, 'ls':None, 'y':[], 'm':[], 'd':[], 'H':[], 'M':[], 'S':[] }
+
     return None
 
 def print_x_legend(a: dict, l: int, b: int, c: int) -> None:
@@ -241,29 +287,23 @@ def print_x_legend(a: dict, l: int, b: int, c: int) -> None:
     if b < 10:
         print(f"{'':>{l}} └{'─' * b}")
         return None
-          
+
     ml = int(b * 0.5)
 
     x = { k: a['d' if k in 'ymd' else 't'][k]
           for k in 'ymdHMS'
-          if 0 < len(a['d' if k in 'ymd' else 't'][k]) < ml }         
+          if 0 < len(a['d' if k in 'ymd' else 't'][k]) < ml }
 
     if len(x) == 0:
         print(f"{'':>{l}} └{'─' * b}")
         return None
-    
+
     if len(x) > 1:
         lkey = max(x, key=lambda k: len(x[k]))
         x = {lkey: x[lkey]}
     else:
         lkey = list(x.keys())[0]
 
-    lege = {'y': 'years >  ',
-            'm': 'months > ',
-            'd': 'days >   ',
-            'H': 'hours >  ',
-            'M': 'minutes >',
-            'S': 'seconds >'}
 
     positions = x[lkey]
     total_braille_cols = 2 * b
@@ -285,7 +325,7 @@ def print_x_legend(a: dict, l: int, b: int, c: int) -> None:
         line[term_col] = chr(0x2800 + new_val)
 
     linex = ''.join(line)
-    print(f"{lege[lkey]}{'':>{l-9}} └{'─' * b}")
+    print(f"{LEGEND[lkey]}{'':>{l-9}} └{'─' * b}")
     print(f"{'':>{l+2}}{linex}")
 
 def reducef(p: list[str], f: int) -> int:
@@ -317,7 +357,7 @@ def am_digit(p: list[str]) -> int:
 def negat(p: list[str]) -> bool:
     return any(s.startswith('-0.') for s in p)
 
-def draw_graph(values_for_plot, original_raw_values, compression_factor, long_numbers, long_floatpa, axisx):
+def draw_graph(values_for_plot, original_raw_values, compression_factor, long_numbers, long_floatpa, axisx, cl, cv):
     if not values_for_plot:
         return
 
@@ -412,15 +452,17 @@ def main():
     raw_values = []
     long_numbers = 0
     long_floatpa = 2
-    counter = 1
+    counter_value = 1
+    counter_line = 1
     axisx = { 'u':True, 
               's':False,
               'e': 0,
               'm': get_terminal_width() if XWIDTH is None else XWIDTH,
-              'd':{ 'cl':None, 'fs': None, 'ls': None, 'y':[], 'm':[], 'd':[] },
-              't':{ 'cl':None, 'fs': None, 'ls': None, 'H':[], 'M':[], 'S':[] },
-              'i':{ k: True for k in ['y', 'm', 'd', 'H', 'M', 'S']}}
-    
+              'd':{ 'cl':None, 'fs':None, 'ls':None, 'y':[], 'm':[], 'd':[] },
+              't':{ 'cl':None, 'fs':None, 'ls':None, 'H':[], 'M':[], 'S':[] },
+              'x':{ 'cl':None, 'fs':None, 'ls':None, 'y':[], 'm':[], 'd':[], 'H':[], 'M':[], 'S':[] },
+              'i':{ k: True for k in ['y', 'm', 'd', 'H', 'M', 'S']}, }
+
     # 1. pipe
     if not sys.stdin.isatty():
         datain = sys.stdin
@@ -436,7 +478,7 @@ def main():
             datain = sys.stdin
 
         else:
-            # We open the first file (or more – but as one stream)
+            # more files – but as one stream
             def multi_file_stream(files):
                 for f_path in files:
                     with open(f_path, 'r', encoding='utf-8') as f:
@@ -454,6 +496,7 @@ def main():
                 line = line.replace(SEPA, '')
             line = line.strip().replace(',', '.')
             if line:
+                counter_line += 1
                 try:
                     value = ( float(line) + ADDM ) * SHFT
                     value = TOPVAL if TOPVAL is not None and value > TOPVAL else value
@@ -462,8 +505,8 @@ def main():
                         long_numbers = len(str(int(value)))
                     raw_values.append(value)
                     if axisx['u'] and COLUMN:
-                        axis_data(fields, counter, axisx)
-                        counter += 1
+                        axis_data(fields, counter_value, axisx)
+                    counter_value += 1
                 except ValueError:
                     continue
 
@@ -493,7 +536,7 @@ def main():
             else:
                 val_for_plot = average_values_in_groups(raw_values, compression_factor)
 
-            draw_graph(val_for_plot, raw_values, compression_factor, long_numbers, long_floatpa, axisx)
+            draw_graph(val_for_plot, raw_values, compression_factor, long_numbers, long_floatpa, axisx, counter_line, counter_value)
 
     except KeyboardInterrupt:
         print(f'\nAfter loading {len(raw_values)} values, it was interrupted by the user.', file=sys.stderr)
