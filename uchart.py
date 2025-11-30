@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from datetime import datetime
 from glob import glob
 import argparse
 import signal
@@ -107,11 +108,47 @@ ISO_PARTS = [(0,  4, "y"),
              (14,16, "M"),
              (17,19, "S"),]
 
+DATE_PARTS = [(0, 4,'y'),
+              (5, 7,'m'),
+              (8,10,'d'),]
+
+TIME_PARTS = [(0,2,'H'),
+              (3,5,'M'),
+              (6,8,'S'),]
+
+TS_RE = re.compile( r'^\d{4}-'                # y 0000-9999
+                    r'(0[1-9]|1[0-2])-'       # m 01–12
+                    r'(0[1-9]|[12]\d|3[01])'  # d 01–31
+                    r'T'
+                    r'(?:[01]\d|2[0-3])'      # H 00–23
+                    r':[0-5]\d'               # M 00–59
+                    r':[0-5]\d' )             # S 00–59
+
+DT_RE = re.compile( r'^\d{4}-'                # y 0000-9999
+                    r'(0[1-9]|1[0-2])-'       # m 01–12
+                    r'(0[1-9]|[12]\d|3[01])') # d 01–31
+
+TM_RE = re.compile( r'^(?:[01]\d|2[0-3])'     # H 01-12
+                    r':[0-5]\d'               # M 00-59
+                    r':[0-5]\d' )             # S 00-59
+
 def get_terminal_width() -> int:
     try:
         return os.get_terminal_size().columns
     except:
         return 80
+
+def is_valid(s: str, mode: str) -> bool:
+    if   mode == 'timestamp': ftm = "%Y-%m-%dT%H:%M:%S"
+    elif mode == 'date':      ftm = "%Y-%m-%d"
+    elif mode == 'time':      ftm = "%H:%M:%S"
+    else: return False
+
+    try:
+        datetime.strptime(s, ftm)
+        return True
+    except ValueError:
+        return False
 
 def create_braille_char(dots):
     base = 0x2800
@@ -164,28 +201,28 @@ def axis_data(g: list[str], c: int, a: dict) -> None:
         if c == 11:
             a['u'] = False
         else:
-            amx = [i for i, item in enumerate(g) if re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', item)]
+            amx = [i for i, item in enumerate(g) if is_valid( item[:19], "timestamp" )]
             if len(amx) == 1:
                 a['x']['cl'] = amx[0]
-                a['x']['fs'] = a['x']['ls'] = g[amx[0]][0:19]
+                a['x']['fs'] = a['x']['ls'] = g[amx[0]][:19]
                 a['s'] = True
 
             else:
 
-                amd = [i for i, item in enumerate(g) if re.match(r'^\d{4}-\d{2}-\d{2}', item)]
+                amd = [i for i, item in enumerate(g) if is_valid( item[:10], "date" )]
                 if len(amd) == 1:
                     a['d']['cl'] = amd[0]
-                    a['d']['fs'] = a['d']['ls'] = g[amd[0]]
+                    a['d']['fs'] = a['d']['ls'] = g[amd[0]][:10]
                     a['s'] = True
 
-                amt = [i for i, item in enumerate(g) if re.match(r'^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$', item)]
+                amt = [i for i, item in enumerate(g) if is_valid( item[:8], "time" )]
                 if len(amt) == 1:
                     a['t']['cl'] = amt[0]
-                    a['t']['fs'] = a['t']['ls'] = g[amt[0]]
+                    a['t']['fs'] = a['t']['ls'] = g[amt[0]][:8]
                     a['s'] = True
 
     if a['x']['cl'] is not None:
-        if g[a['x']['cl']][0:19] != a['x']['ls']:
+        if g[a['x']['cl']][:19] != a['x']['ls']:
             toend = False
             for s1, s2, l in ISO_PARTS:
                 if toend:
@@ -196,35 +233,32 @@ def axis_data(g: list[str], c: int, a: dict) -> None:
                         if a['i'][l]:
                             a['x'][l].append(c)
                         toend = True
-            if toend:
-                a['x']['ls'] = g[a['x']['cl']][0:19] 
+            a['x']['ls'] = g[a['x']['cl']][:19] 
 
     else:
         if a['d']['ls'] is not None:
-            if g[a['d']['cl']] != a['d']['ls']:
-                if g[a['d']['cl']][0:4] != a['d']['ls'][0:4]:
-                    if a['i']['y']: a['d']['y'].append(c)
-                    if a['i']['m']: a['d']['m'].append(c)
-                    if a['i']['d']: a['d']['d'].append(c)
-                elif g[a['d']['cl']][5:7] != a['d']['ls'][5:7]:
-                    if a['i']['m']: a['d']['m'].append(c)
-                    if a['i']['d']: a['d']['d'].append(c)
-                elif g[a['d']['cl']][8:10] != a['d']['ls'][8:10]:
-                    if a['i']['d']: a['d']['d'].append(c)
-                a['d']['ls'] = g[a['d']['cl']]
+            if g[a['d']['cl']][:10] != a['d']['ls']:
+                toend = False
+                for s1, s2, l in DATE_PARTS:
+                    if toend:
+                        if a['i'][l]: a['d'][l].append(c)
+                    else:
+                        if g[a['d']['cl']][s1:s2] != a['d']['ls'][s1:s2]:
+                            if a['i'][l]: a['d'][l].append(c)
+                            toend = True
+                a['d']['ls'] = g[a['d']['cl']][:10] 
 
         if a['t']['ls'] is not None:
-            if g[a['t']['cl']] != a['t']['ls']:
-                if g[a['t']['cl']][0:2] != a['t']['ls'][0:2]:
-                    if a['i']['H']: a['t']['H'].append(c)
-                    if a['i']['M']: a['t']['M'].append(c)
-                    if a['i']['S']: a['t']['S'].append(c)
-                elif g[a['t']['cl']][3:5] != a['t']['ls'][3:5]:
-                    if a['i']['M']: a['t']['M'].append(c)
-                    if a['i']['S']: a['t']['S'].append(c)
-                elif g[a['t']['cl']][6:8] != a['t']['ls'][6:8]:
-                    if a['i']['S']: a['t']['S'].append(c)
-                a['t']['ls'] = g[a['t']['cl']]
+            if g[a['t']['cl']][:8] != a['t']['ls']:
+                toend = False
+                for s1, s2, l in TIME_PARTS:
+                    if toend:
+                        if a['i'][l]: a['t'][l].append(c)
+                    else:
+                        if g[a['t']['cl']][s1:s2] != a['t']['ls'][s1:s2]:
+                            if a['i'][l]: a['t'][l].append(c)
+                            toend = True
+                a['t']['ls'] = g[a['t']['cl']][:8] 
 
     if c%10 == 0:
 
@@ -233,7 +267,6 @@ def axis_data(g: list[str], c: int, a: dict) -> None:
                 if len(a['x'][i]) > a['m']:
                     a['x'][i] = []
                     a['i'][i] = False
-
         else:
 
             if a['t']['cl'] is not None:
@@ -248,20 +281,19 @@ def axis_data(g: list[str], c: int, a: dict) -> None:
                         a['d'][i] = []
                         a['i'][i] = False
 
-
         if a['d']['cl'] is not None:
-            if not re.match(r'^\d{4}-\d{2}-\d{2}', g[a['d']['cl']]):
+            if not DT_RE.match( g[a['d']['cl']][:10] ):
                 a['e'] += 1
 
         if a['t']['cl'] is not None:
-            if not re.match(r'^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$', g[a['t']['cl']]):
+            if not TM_RE.match( g[a['t']['cl']][:8] ):
                 a['e'] += 1
 
         if a['x']['cl'] is not None:
-            if not re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', g[a['x']['cl']]):
+            if not TS_RE.match( g[a['x']['cl']][:19] ):
                 a['e'] += 1
 
-        if a['e'] > 3:
+        if a['e'] > 2:
             a['u'] = False
 
             return None
