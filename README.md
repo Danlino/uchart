@@ -139,6 +139,25 @@ This keeps a common Y-axis range and makes the charts visually comparable.
 
 ![multi-chart](images/multichart.png)
 
+---
+### Aggregated by time unit (y/m/d/H/M/S)
+If the input data contains valid timestamps, **uChart can automatically aggregate (sum) values in the selected column** by a chosen time interval.
+
+All you need to tell uChart is the **time unit** to use for aggregation.  
+Specify it right next to the column number after the `-c` switch.
+
+**Examples:**
+- `-c 1d` → sums all values from the same day
+- `-c 1H` → sums all values from the same hour
+- `-c 1m` → sums all values from the same month
+
+In the example below, all values fall within a single day, so `-c 1d` aggregates everything into **one bar**.
+
+The screenshot also demonstrates the **debug mode** (`-X`).  
+The two unprocessed lines at the top are simply the header of the input text file.
+
+![sum-data](images/sum_data.png)
+
 ## Installation
 Linux
 ```bash
@@ -147,7 +166,7 @@ curl -fsSL https://raw.githubusercontent.com/Danlino/uchart/main/install.sh | ba
 
 ---
 ### USAGE:
-&emsp;uchart [**-h**] [**-y** <NUMBER>] [**-x** <NUMBER>] [**-m**] [**-l**] [**-n**] [**-t** <NUMBER>] [**-b** <NUMBER>] [**-s** <NUMBER>] [**-a** <NUMBER>] [**-f** SEP] [file]
+&emsp;usage: uchart [-h] [-v] [-y] [-x] [-m] [-X] [-c] [-l] [-n] [-t] [-b] [-s] [-a] [-f] [file ...]
 
 _**positional arguments:**_  
 **file**  
@@ -158,6 +177,10 @@ _**options:**_
 
 **-h**, --help  
 &emsp;`Show help message and exit.`
+
+---
+**-v**, --version  
+&emsp;`Show program's version number and exit.`
 
 ---
 **-y** <ins>NUMBER</ins>, --height <ins>NUMBER</ins>  
@@ -181,7 +204,11 @@ By default, when a column contains multiple values, uchart plots only a single p
 The `-m` / `--multi` flag forces uchart to plot every individual value instead.
 
 ---
-**-c** <ins>NUMBER</ins>, --column <ins>NUMBER</ins>  
+**-X**, --debug-mode  
+&emsp;`Additional information about the processing of input data.`
+
+---
+**-c** <ins>NUMBER[y|m|d|H|M|S]</ins>, --column <ins>NUMBER[y|m|d|H|M|S]</ins>  
 &emsp;`Specifies which field (column) in the input line to use.`
 
 By default (without `-c`), **uchart** expects **exactly one numeric value per line**.  
@@ -192,6 +219,9 @@ Use the `-c N` / `--column N` option to select a specific column from space- or 
 - N is 1-based (first column = 1)
 - If a line has fewer than `N` columns, it is skipped
 
+Can now include time unit modifier [y]ear, [m]onth, [d]ay, [H]our, [M]inute, [S]econd. Values within the same time period are summed into one bar.
+Example: '5H' or 'H5' = total for that hour from timestamp data.
+This function excels at aggregating and visualizing high volumes of discrete events over time periods. For example: counting errors, requests, or status changes per minute/hour/day in log files.
 
 ---
 **-l**, --no-legend  
@@ -238,13 +268,13 @@ uchart -s -3 data.txt      # ÷1000  (kilobytes → bytes)
 ```
 
 
-| Value   | Effect     | Example:          |
-|---------|------------|-------------------|
-| `-s 3`  | ×1000      | 0.012 → 12        |
-| `-s 2`  | ×100       | 0.001 → 0.1       |
-| `-s 0`  | no change  |                   |
-| `-s -1` | ÷10        | 1000 → 100        |
-| `-s -6` | ÷1000000   | 1000000000 → 1000 |
+| Value               | Effect     | Example:          |
+|---------------------|------------|-------------------|
+| `-s 3`              | ×1000      | 0.012 → 12        |
+| `-s 2`              | ×100       | 0.001 → 0.1       |
+| `-s 0` or `No Used` | no change  | -                 |
+| `-s -1`             | ÷10        | 1000 → 100        |
+| `-s -6`             | ÷1000000   | 1000000000 → 1000 |
 
 Range: -15 to +15 (10⁻¹⁵ to 10¹⁵)
 
