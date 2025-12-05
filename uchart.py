@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+__version__ = "0.9.20"
 from datetime import datetime
 from glob import glob
 import argparse
@@ -25,18 +26,23 @@ signal.signal(signal.SIGINT, _handle_sigint)
 
 def get_arg():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-v', '--version', action='version',
+                        version=f"uChart {__version__}")
     parser.add_argument('-y', '--height',
-                        type=int, default=7, metavar='<NUMBER>',
+                        type=int, default=7, metavar='<N>',
                         help='Chart height in lines (default: %(default)s)')
     parser.add_argument('-x', '--width',
-                        type=int, default=None, dest='width', metavar='<NUMBER>',
+                        type=int, default=None, dest='width', metavar='<N>',
                         help='Maximum chart width in characters.')
     parser.add_argument('-m', '--multi',
                         action='store_true', dest='multi_value',
                         help='Plot all individual values instead of just the mean.')
+    parser.add_argument('-X', '--debug-mode',
+                        action='store_true', dest='debug',
+                        help='Additional information about the processing of input data.')
     parser.add_argument('-c', '--column',
-                        type=int, default=None, dest='column', metavar='<NUMBER>',
-                        help='Specifies which field (column) in the input line to use.')
+                        type=str, default=None, dest='column', metavar='<N>[y|m|d|H|M|S]',
+                        help='Column number with optional time aggregation.')
     parser.add_argument('-l', '--no-legend',
                         action='store_false', dest='show_legend', default=True,
                         help='Do not display the chart legend.')
@@ -44,16 +50,16 @@ def get_arg():
                         action='store_false', dest='show_stat', default=True,
                         help='Do not display the chart stat.')
     parser.add_argument('-t', '--top-value',
-                        type=float, default=None, dest='topv', metavar='<NUMBER>',
+                        type=float, default=None, dest='topv', metavar='<N>',
                         help='Maximum value in chart. (upper limit of Y-axis)')
     parser.add_argument('-b', '--bottom-value',
-                        type=float, default=None, dest='bottomv', metavar='<NUMBER>',
+                        type=float, default=None, dest='bottomv', metavar='<N>',
                         help='Minimum value in chart. (lower limit of Y-axis)')
     parser.add_argument('-s', '--shift',
-                        type=int, default=None, dest='shft', metavar='<NUMBER>',
+                        type=int, default=None, dest='shft', metavar='<N>',
                         help='Shift decimal point. (e.g. -6 = ÷1_000_000, 3 = ×1_000)')
     parser.add_argument('-a', '--add',
-                        type=float, default=0, dest='addm', metavar='<NUMBER>',
+                        type=float, default=0, dest='addm', metavar='<N>',
                         help='The constant that will be added to each item. (default: %(default)s)')
     parser.add_argument('-f', '--format',
                         type=str, choices=[',', '.'], dest='separator', default=None, metavar='SEP',
@@ -74,39 +80,68 @@ def get_shift(shft: int | None) -> float | int:
         return 1
     return 10 ** shft
 
+def column_choice(s: str | None):
+
+    if s:
+        s = re.sub(r'[^a-zA-Z0-9]', '', s)
+
+        if re.fullmatch(r'\d+', s):
+            if 0 < int(s) < 1e3:
+                return int(s), None
+
+        if re.fullmatch(r'([ymdHMS])(\d+)|\d+([ymdHMS])', s):
+            mode = re.sub(r'[^a-zA-Z]', '', s)
+            colu = re.sub(r'[^0-9]', '', s)
+            if 0 < int(colu) < 1e3:
+                return int(colu), mode
+
+        print(f"Invalid -c option.\n"
+              f"Use a column number (e.g. 3) or add one modifier:\n"
+              f"[y]ear, [m]onth, [d]ay, [H]our, [M]inute, [S]econd\n"
+              f"Examples: 3, m3, 3m, H3, M3, y3, d3", file=sys.stderr )
+
+    return None, None
+
 arg = get_arg()
 
-SHOWLEGEND = arg.show_legend
-SHOWSTATS  = arg.show_stat
-YHEIGHT    = arg.height
-XWIDTH     = arg.width
-MULTIV     = arg.multi_value
-COLUMN     = arg.column
-TOPVAL     = arg.topv
-DOWNV      = arg.bottomv
-SHFT       = get_shift(arg.shft)
-SEPA       = arg.separator
-ADDM       = arg.addm
+COLUMN, CSUM = column_choice(arg.column)
+SHFT         = get_shift(arg.shft)
+MULTIV       = arg.multi_value
+SHOWLEGEND   = arg.show_legend
+SHOWSTATS    = arg.show_stat
+SEPA         = arg.separator
+DOWNV        = arg.bottomv
+YHEIGHT      = arg.height
+DEBUGFLAG    = arg.debug
+XWIDTH       = arg.width
+ADDM         = arg.addm
+TOPVAL       = arg.topv
 
-YHEIGHT = 2 if YHEIGHT is not None and YHEIGHT < 2 else YHEIGHT
+YHEIGHT = 2 if YHEIGHT < 2 else YHEIGHT
 XWIDTH  = None if XWIDTH is not None and XWIDTH < 1 else XWIDTH
-COLUMN  = None if COLUMN is not None and COLUMN < 1 else COLUMN
 if TOPVAL is not None and DOWNV is not None and TOPVAL <= DOWNV:
     TOPVAL = DOWNV = None
 
-LEGEND = {'y': 'years >  ',
-          'm': 'months > ',
-          'd': 'days >   ',
-          'H': 'hours >  ',
-          'M': 'minutes >',
-          'S': 'seconds >',}
+LEGEND = {    'y': 'years >  ',
+              'm': 'months > ',
+              'd': 'days >   ',
+              'H': 'hours >  ',
+              'M': 'minutes >',
+              'S': 'seconds >',}
 
-ISO_PARTS = [(0,  4, "y"),
-             (5,  7, "m"),
-             (8, 10, "d"),
-             (11,13, "H"),
-             (14,16, "M"),
-             (17,19, "S"),]
+SUM_LEGEND = {'y': 'year Σ   ',
+              'm': 'month Σ  ',
+              'd': 'day Σ    ',
+              'H': 'hour Σ   ',
+              'M': 'min Σ    ',
+              'S': 'sec Σ    ',}
+
+ISO_PARTS = [ (0,  4, "y"),
+              (5,  7, "m"),
+              (8, 10, "d"),
+              (11,13, "H"),
+              (14,16, "M"),
+              (17,19, "S"),]
 
 DATE_PARTS = [(0, 4,'y'),
               (5, 7,'m'),
@@ -120,17 +155,18 @@ TS_RE = re.compile( r'^\d{4}-'                # y 0000-9999
                     r'(0[1-9]|1[0-2])-'       # m 01–12
                     r'(0[1-9]|[12]\d|3[01])'  # d 01–31
                     r'T'
-                    r'(?:[01]\d|2[0-3])'      # H 00–23
+                    r'([01]\d|2[0-3])'        # H 00–23
                     r':[0-5]\d'               # M 00–59
-                    r':[0-5]\d' )             # S 00–59
+                    r':[0-5]\d')              # S 00–59
 
 DT_RE = re.compile( r'^\d{4}-'                # y 0000-9999
                     r'(0[1-9]|1[0-2])-'       # m 01–12
                     r'(0[1-9]|[12]\d|3[01])') # d 01–31
 
-TM_RE = re.compile( r'^(?:[01]\d|2[0-3])'     # H 01-12
+TM_RE = re.compile( r'^([01]\d|2[0-3])'       # H 00-23
                     r':[0-5]\d'               # M 00-59
-                    r':[0-5]\d' )             # S 00-59
+                    r'(?::[0-5]\d)?$')        # S 00-59 if is
+
 
 def get_terminal_width() -> int:
     try:
@@ -139,9 +175,12 @@ def get_terminal_width() -> int:
         return 80
 
 def is_valid(s: str, mode: str) -> bool:
-    if   mode == 'timestamp': ftm = "%Y-%m-%dT%H:%M:%S"
-    elif mode == 'date':      ftm = "%Y-%m-%d"
-    elif mode == 'time':      ftm = "%H:%M:%S"
+    if   mode == 'tist': ftm = "%Y-%m-%dT%H:%M:%S"
+    elif mode == 'date': ftm = "%Y-%m-%d"
+    elif mode == 'time' and len(s) == 8:
+        ftm = "%H:%M:%S"
+    elif mode == 'time' and len(s) == 5:
+        ftm = "%H:%M"
     else: return False
 
     try:
@@ -194,137 +233,203 @@ def group_values_for_multi(values_list, group_size):
             result.append(group)
     return result
 
-def axis_data(g: list[str], c: int, a: dict) -> None:
 
-    if 1 <= c <= 11 and a['s'] is False:
+def date_time(g: list[str], c: int, a: dict, v: float, e: dict, p: dict) -> None:
+
+    if 1 <= c <= 11 and e['s'] is False:
 
         if c == 11:
-            a['u'] = False
+            e['u'] = False
+            return None
+
         else:
-            amx = [i for i, item in enumerate(g) if is_valid( item[:19], "timestamp" )]
+            amx = [i for i, item in enumerate(g) if is_valid( item[:19], "tist" )]
             if len(amx) == 1:
-                a['x']['cl'] = amx[0]
-                a['x']['fs'] = a['x']['ls'] = g[amx[0]][:19]
-                a['s'] = True
+                e['a'] = e['X'] = g[amx[0]][:19]
+                e['s'] = a['u'] = True
+                if CSUM: p['u'] = True
+                e['x'] = amx[0]
+                e['f'] = c
 
             else:
 
                 amd = [i for i, item in enumerate(g) if is_valid( item[:10], "date" )]
                 if len(amd) == 1:
-                    a['d']['cl'] = amd[0]
-                    a['d']['fs'] = a['d']['ls'] = g[amd[0]][:10]
-                    a['s'] = True
+                    e['b'] = e['D'] = g[amd[0]][:10]
+                    e['s'] = a['u'] = True
+                    if CSUM: p['u'] = True
+                    e['d'] = amd[0]
+                    e['f'] = c
 
                 amt = [i for i, item in enumerate(g) if is_valid( item[:8], "time" )]
                 if len(amt) == 1:
-                    a['t']['cl'] = amt[0]
-                    a['t']['fs'] = a['t']['ls'] = g[amt[0]][:8]
-                    a['s'] = True
+                    e['c'] = e['T'] = g[amt[0]][:8]
+                    e['s'] = a['u'] = True
+                    if CSUM: p['u'] = True
+                    e['t'] = amt[0]
+                    e['f'] = c
 
-    if a['x']['cl'] is not None:
-        if g[a['x']['cl']][:19] != a['x']['ls']:
+    if e['x'] is not None:
+        if g[e['x']][:19] != e['X']:
             toend = False
             for s1, s2, l in ISO_PARTS:
                 if toend:
                     if a['i'][l]:
                         a['x'][l].append(c)
                 else:
-                    if a['x']['ls'][s1:s2] != g[a['x']['cl']][s1:s2]:
+                    if e['X'][s1:s2] != g[e['x']][s1:s2]:
                         if a['i'][l]:
                             a['x'][l].append(c)
                         toend = True
-            a['x']['ls'] = g[a['x']['cl']][:19] 
+            e['X'] = g[e['x']][:19] 
 
     else:
-        if a['d']['ls'] is not None:
-            if g[a['d']['cl']][:10] != a['d']['ls']:
+        if e['d'] is not None:
+            if g[e['d']][:10] != e['D']:
                 toend = False
                 for s1, s2, l in DATE_PARTS:
                     if toend:
-                        if a['i'][l]: a['d'][l].append(c)
+                        if a['i'][l]:
+                            a['d'][l].append(c)
                     else:
-                        if g[a['d']['cl']][s1:s2] != a['d']['ls'][s1:s2]:
-                            if a['i'][l]: a['d'][l].append(c)
+                        if e['D'][s1:s2] != g[e['d']][s1:s2]:
+                            if a['i'][l]:
+                                a['d'][l].append(c)
                             toend = True
-                a['d']['ls'] = g[a['d']['cl']][:10] 
+                e['D'] = g[e['d']][:10] 
 
-        if a['t']['ls'] is not None:
-            if g[a['t']['cl']][:8] != a['t']['ls']:
+        if e['t'] is not None:
+            if g[e['t']][:10] != e['T']:
                 toend = False
                 for s1, s2, l in TIME_PARTS:
                     if toend:
-                        if a['i'][l]: a['t'][l].append(c)
+                        if a['i'][l]:
+                            a['t'][l].append(c)
                     else:
-                        if g[a['t']['cl']][s1:s2] != a['t']['ls'][s1:s2]:
-                            if a['i'][l]: a['t'][l].append(c)
+                        if e['T'][s1:s2] != g[e['t']][s1:s2]:
+                            if a['i'][l]:
+                                a['t'][l].append(c)
                             toend = True
-                a['t']['ls'] = g[a['t']['cl']][:8] 
+                e['T'] = g[e['t']][:8] 
 
-    if c%10 == 0:
+    if c%5 == 0:
 
-        if a['x']['cl'] is not None:
+        if e['x'] is not None:
             for i in ['y','m','d','H','M','S']:
                 if len(a['x'][i]) > a['m']:
                     a['x'][i] = []
                     a['i'][i] = False
         else:
 
-            if a['t']['cl'] is not None:
+            if e['t'] is not None:
                 for i in ['H','M','S']:
                     if len(a['t'][i]) > a['m']:
                         a['t'][i] = []
                         a['i'][i] = False
 
-            if a['d']['cl'] is not None:
+            if e['d'] is not None:
                 for i in ['y','m','d']:
                     if len(a['d'][i]) > a['m']:
                         a['d'][i] = []
                         a['i'][i] = False
 
-        if a['d']['cl'] is not None:
-            if not DT_RE.match( g[a['d']['cl']][:10] ):
+        if e['x'] is not None:
+            if not TS_RE.match( g[e['x']][:19] ):
                 a['e'] += 1
 
-        if a['t']['cl'] is not None:
-            if not TM_RE.match( g[a['t']['cl']][:8] ):
-                a['e'] += 1
+        else:
 
-        if a['x']['cl'] is not None:
-            if not TS_RE.match( g[a['x']['cl']][:19] ):
-                a['e'] += 1
+            if e['d'] is not None:
+                if not DT_RE.match( g[e['d']][:10] ):
+                    a['e'] += 1
 
-        if a['e'] > 2:
-            a['u'] = False
+            if e['t'] is not None:
+                if not TM_RE.match( g[e['t']][:8] ):
+                    a['e'] += 1
 
+        if e['e'] > 0:
+            e['u'] = False
+            p['u'] = False
+            p['g'] = {}
             return None
 
         if c%100 == 0:
 
-            if a['d']['cl'] is not None:
-                if not any( a['i'][k] for k in "ymd" ):
-                    a['d'] = { 'cl':None, 'fs': None, 'ls': None, 'y':[], 'm':[], 'd':[] }
-
-            if a['t']['cl'] is not None:
-                if not any( a['i'][k] for k in "HMS" ):
-                    a['t'] = { 'cl':None, 'fs': None, 'ls': None, 'H':[], 'M':[], 'S':[] }
-
-            if a['x']['cl'] is not None:
+            if e['x'] is not None:
                 if not any( a['i'][k] for k in "ymdHMS" ):
-                    a['t'] = { 'cl':None, 'fs':None, 'ls':None, 'y':[], 'm':[], 'd':[], 'H':[], 'M':[], 'S':[] }
+                    a['x'] = { k: [] for k in 'ymdHMS' }
+            else:
+
+                if e['d'] is not None:
+                    if not any( a['i'][k] for k in "ymd" ):
+                        a['d'] = { 'y':[], 'm':[], 'd':[] }
+
+                if e['t'] is not None:
+                    if not any( a['i'][k] for k in "HMS" ):
+                        a['t'] = { 'H':[], 'M':[], 'S':[] }
+
+    if e['u'] and e['s'] and CSUM:
+        if e['x'] is not None:
+            for s1, s2, l in ISO_PARTS:
+                if l == CSUM:
+                    if g[e['x']][:s2] in p['g']:
+                        p['g'][g[e['x']][:s2]] += v
+                    else:
+                        p['g'][g[e['x']][:s2]] = v
+        else:
+            if e['d'] is not None and e['t'] is not None:
+                ts = g[e['d']][:10] + 'T' + g[e['t']][:8]
+            elif e['d']:
+                ts = g[e['d']][:10] + 'T00:00:00'
+            elif e['t'] is not None:
+                ts = '0000-00-00T' + g[e['t']][:8]
+            for s1, s2, l in ISO_PARTS:
+                if l == CSUM:
+                    if ts[:s2] in p['g']:
+                        p['g'][ts[:s2]] += v
+                    else:
+                        p['g'][ts[:s2]] = v
 
     return None
 
-def print_x_legend(a: dict, l: int, b: int, c: int) -> None:
+def group_by_time(r: list, l: int, c: int, e: dict, p: dict):
+    count = long = 0
+    new_raw = []
+    valid = (    e['e'] == 0
+             and c > 0
+             and len(p['g']) > 0
+             and CSUM        )
+
+    if valid:
+        for i in p['g'].values():
+            if len(str(int(i))) > long:
+                long = len(str(int(i)))
+            new_raw.append(i)
+            count += 1
+        p['l'] = True
+        return new_raw, long, count
+
+    return r, l, c
+
+def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
+
+    if CSUM:
+        print(f"{SUM_LEGEND[CSUM]}{'':>{l-9}} └{'─' * b}")
+        return None
 
     if b < 10:
         print(f"{'':>{l}} └{'─' * b}")
         return None
 
-    ml = int(b * 0.5)
+    ml = int(b * 0.7)
 
-    x = { k: a['d' if k in 'ymd' else 't'][k]
-          for k in 'ymdHMS'
-          if 0 < len(a['d' if k in 'ymd' else 't'][k]) < ml }
+    if e['d'] is not None or e['t'] is not None:
+        x = { k: a['d' if k in 'ymd' else 't'][k]
+              for k in 'ymdHMS'
+              if 0 < len(a['d' if k in 'ymd' else 't'][k]) < ml }
+
+    if e['x'] is not None:
+        x = { k: a['x'][k] for k in 'ymdHMS' if 0 < len(a['x'][k]) < ml }
 
     if len(x) == 0:
         print(f"{'':>{l}} └{'─' * b}")
@@ -335,7 +440,6 @@ def print_x_legend(a: dict, l: int, b: int, c: int) -> None:
         x = {lkey: x[lkey]}
     else:
         lkey = list(x.keys())[0]
-
 
     positions = x[lkey]
     total_braille_cols = 2 * b
@@ -359,6 +463,21 @@ def print_x_legend(a: dict, l: int, b: int, c: int) -> None:
     linex = ''.join(line)
     print(f"{LEGEND[lkey]}{'':>{l-9}} └{'─' * b}")
     print(f"{'':>{l+2}}{linex}")
+
+def print_debug_info(c, a, g, cl, cv, co, el, cf):
+    err = f"{co/cl*100:.3f}%" if cl != 0 else 'n/a%'
+    el = f"{el[:3]}..." if len(el)>3 else el
+    ts = f"{c['f']}. line" if c['f'] is not None else 'Undetected'
+    print( f"\n Total in. lines: {cl}\n"
+             f" Processed lines: {co} ({err})\n"
+             f" Error lines:     {cl-co} {el}\n"
+             f" Values in chart: {cv}\n"
+             f" Terminal width:  {a['m']}\n"
+             f" Compression:     {cf}\n"
+             f" Amount Σ:        {len(g['g'])}\n"
+             f" First timestamp: {ts}\n"
+             f" f: TS='{c['a']}', D='{c['b']}', T='{c['c']}'\n"
+             f" l: TS='{c['X']}', D='{c['D']}', T='{c['T']}'\n", file=sys.stderr)
 
 def reducef(p: list[str], f: int) -> int:
     if len(p) < 2:
@@ -389,7 +508,7 @@ def am_digit(p: list[str]) -> int:
 def negat(p: list[str]) -> bool:
     return any(s.startswith('-0.') for s in p)
 
-def draw_graph(values_for_plot, original_raw_values, compression_factor, long_numbers, long_floatpa, axisx, cl, cv):
+def draw_graph(values_for_plot, original_raw_values, compression_factor, long_numbers, long_floatpa, axisx, colle, grups, cl, cv):
     if not values_for_plot:
         return
 
@@ -474,61 +593,104 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
         num_braille_chars = (len(values_for_plot) + 1) // 2
 
         if axisx['u']:
-            print_x_legend(axisx, nega+long_numbers+3, num_braille_chars, compression_factor)
+            print_x_legend(axisx, colle, grups, nega+long_numbers+3, num_braille_chars, compression_factor)
         else:
             print(f"{'':>{nega+long_numbers+3}} └{'─' * num_braille_chars}")
 
 
 def main():
+
     args = get_arg()
     raw_values = []
+    err_lines = []
     long_numbers = 0
     long_floatpa = 2
-    counter_value = 1
-    counter_line = 1
-    axisx = { 'u':True, 
-              's':False,
-              'e': 0,
+    counter_line = 0
+    counter_value = 0
+
+    colle = { 'u': True,  # I use date/time
+              's': False, # Found
+              'e': 0,     # 0 = no errors
+              'f': None,  # first d/t value
+
+              'x': None,  # collumn
+              'a': None,  # first - 0000-00-00T00:00:00
+              'X': None,  # last  - 0000-00-00T00:00:00
+
+              'd': None,  # collumn
+              'b': None,  # first - 0000-00-00
+              'D': None,  # last  - 0000-00-00
+
+              't': None,  # collumn
+              'c': None,  # first - 00:00:00
+              'T': None,  # last  - 00:00:00
+            }
+
+    axisx = { 'u': False, 
               'm': get_terminal_width() if XWIDTH is None else XWIDTH,
-              'd':{ 'cl':None, 'fs':None, 'ls':None, 'y':[], 'm':[], 'd':[] },
-              't':{ 'cl':None, 'fs':None, 'ls':None, 'H':[], 'M':[], 'S':[] },
-              'x':{ 'cl':None, 'fs':None, 'ls':None, 'y':[], 'm':[], 'd':[], 'H':[], 'M':[], 'S':[] },
-              'i':{ k: True for k in ['y', 'm', 'd', 'H', 'M', 'S']}, }
+              'i': { k: True for k in 'ymdHMS' },
+
+              'x': { 'y':[], 'm':[], 'd':[], 'H':[], 'M':[], 'S':[] },
+              'X': True,
+
+              'd': { 'y':[], 'm':[], 'd':[] },
+              'D': True,
+
+              't': { 'H':[], 'M':[], 'S':[] },
+              'T': True,
+            }
+
+    grups = { 'u': False,
+              'l': False,
+              'g': {},
+            }
+
 
     # 1. pipe
-    if not sys.stdin.isatty():
+    if not sys.stdin.isatty() and not args.file:
         datain = sys.stdin
 
     # 2. file or files
     else:
         file_list = []
+        has_pattern = bool(args.file)
+
         for pattern in args.file or []:
             matches = glob(pattern)
-            file_list.extend(matches if matches else [pattern])
+            if matches:
+                file_list.extend(matches)
+            else:
+                print(f"{pattern}: No such file or directory", file=sys.stderr)
 
         if not file_list:
-            datain = sys.stdin
-
+            if has_pattern:
+                print("No input files found.", file=sys.stderr)
+                sys.exit(1)
+            else:
+                datain = sys.stdin
         else:
-            # more files – but as one stream
             def multi_file_stream(files):
                 for f_path in files:
-                    with open(f_path, 'r', encoding='utf-8') as f:
-                        yield from f
+                    try:
+                        with open(f_path, 'r', encoding='utf-8') as f:
+                            yield from f
+                    except Exception as e:
+                        print(f"Error reading {f_path}: {e}", file=sys.stderr)
 
             datain = multi_file_stream(file_list)
-
     try:
         for line in datain:
+            counter_line += 1
             if COLUMN:
                 fields = line.split()
-                if len(fields) < COLUMN: continue
+                if len(fields) < COLUMN:
+                    if len(err_lines) < 4: err_lines.append(counter_line)
+                    continue
                 line = fields[COLUMN-1]
             if SEPA:
                 line = line.replace(SEPA, '')
             line = line.strip().replace(',', '.')
             if line:
-                counter_line += 1
                 try:
                     value = ( float(line) + ADDM ) * SHFT
                     value = TOPVAL if TOPVAL is not None and value > TOPVAL else value
@@ -536,18 +698,24 @@ def main():
                     if len(str(int(value))) > long_numbers:
                         long_numbers = len(str(int(value)))
                     raw_values.append(value)
-                    if axisx['u'] and COLUMN:
-                        axis_data(fields, counter_value, axisx)
                     counter_value += 1
+
+                    if colle['u'] and COLUMN:
+                        date_time(fields, counter_value, axisx, value, colle, grups)
                 except ValueError:
+                    if len(err_lines) < 4: err_lines.append(counter_line)
                     continue
+
+        old_counter_value = counter_value
+        if grups['u']:
+            raw_values, long_numbers, counter_value = group_by_time(raw_values, long_numbers, counter_value, colle, grups)
 
         if long_numbers < 6:
             long_floatpa = 8 - long_numbers
             long_numbers = 6
 
         if raw_values:
-            if XWIDTH is not None and XWIDTH < get_terminal_width() - (long_numbers + 1 + long_floatpa + 2 + 2):
+            if XWIDTH and XWIDTH < get_terminal_width() - (long_numbers + 1 + long_floatpa + 2 + 2):
                 term_width = XWIDTH
             else:
                 term_width = get_terminal_width() - (long_numbers + 1 + long_floatpa + 2 + 2)
@@ -568,7 +736,17 @@ def main():
             else:
                 val_for_plot = average_values_in_groups(raw_values, compression_factor)
 
-            draw_graph(val_for_plot, raw_values, compression_factor, long_numbers, long_floatpa, axisx, counter_line, counter_value)
+            draw_graph(val_for_plot, raw_values, compression_factor, long_numbers,
+                       long_floatpa, axisx, colle, grups, counter_line, counter_value)
+
+            if DEBUGFLAG:
+                print_debug_info(colle, axisx, grups, counter_line, counter_value,
+                                 old_counter_value, err_lines, compression_factor)
+        else:
+            if DEBUGFLAG:
+                print( f'\n Total in. lines: {counter_line}\n'
+                       f' Processed lines: {old_counter_value}\n' )
+
 
     except KeyboardInterrupt:
         print(f'\nAfter loading {len(raw_values)} values, it was interrupted by the user.', file=sys.stderr)
