@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.9.20"
+__version__ = "0.9.21"
 from datetime import datetime
 from glob import glob
 import argparse
@@ -159,13 +159,13 @@ TS_RE = re.compile( r'^\d{4}-'                # y 0000-9999
                     r':[0-5]\d'               # M 00–59
                     r':[0-5]\d')              # S 00–59
 
-DT_RE = re.compile( r'^\d{4}-'                # y 0000-9999
-                    r'(0[1-9]|1[0-2])-'       # m 01–12
+DT_RE = re.compile( r'^\d{4}[-/]'             # y 0000-9999
+                    r'(0[1-9]|1[0-2])[-/]'    # m 01–12
                     r'(0[1-9]|[12]\d|3[01])') # d 01–31
 
 TM_RE = re.compile( r'^([01]\d|2[0-3])'       # H 00-23
-                    r':[0-5]\d'               # M 00-59
-                    r'(?::[0-5]\d)?$')        # S 00-59 if is
+                    r'[:.][0-5]\d'            # M 00-59
+                    r'(?:[:.][0-5]\d)?$')     # S 00-59 if is
 
 
 def get_terminal_width() -> int:
@@ -175,19 +175,21 @@ def get_terminal_width() -> int:
         return 80
 
 def is_valid(s: str, mode: str) -> bool:
-    if   mode == 'tist': ftm = "%Y-%m-%dT%H:%M:%S"
-    elif mode == 'date': ftm = "%Y-%m-%d"
+    if mode == 'tist': ftm = ("%Y-%m-%dT%H:%M:%S",)
+    elif mode == 'date': ftm = ("%Y-%m-%d", "%Y/%m/%d")
     elif mode == 'time' and len(s) == 8:
-        ftm = "%H:%M:%S"
+        ftm = ("%H:%M:%S", "%H.%M.%S")
     elif mode == 'time' and len(s) == 5:
-        ftm = "%H:%M"
+        ftm = ("%H:%M",)
     else: return False
 
-    try:
-        datetime.strptime(s, ftm)
-        return True
-    except ValueError:
-        return False
+    for f in ftm:
+        try:
+            datetime.strptime(s, f)
+            return True
+        except ValueError:
+            continue
+    return False
 
 def create_braille_char(dots):
     base = 0x2800
@@ -234,7 +236,7 @@ def group_values_for_multi(values_list, group_size):
     return result
 
 
-def date_time(g: list[str], c: int, a: dict, v: float, e: dict, p: dict) -> None:
+def date_time(g: list[str], cl: int, c: int, a: dict, v: float, e: dict, p: dict) -> None:
 
     if 1 <= c <= 11 and e['s'] is False:
 
@@ -248,8 +250,8 @@ def date_time(g: list[str], c: int, a: dict, v: float, e: dict, p: dict) -> None
                 e['a'] = e['X'] = g[amx[0]][:19]
                 e['s'] = a['u'] = True
                 if CSUM: p['u'] = True
+                e['f'] = [cl, c]
                 e['x'] = amx[0]
-                e['f'] = c
 
             else:
 
@@ -258,16 +260,16 @@ def date_time(g: list[str], c: int, a: dict, v: float, e: dict, p: dict) -> None
                     e['b'] = e['D'] = g[amd[0]][:10]
                     e['s'] = a['u'] = True
                     if CSUM: p['u'] = True
+                    e['f'] = [cl, c]
                     e['d'] = amd[0]
-                    e['f'] = c
 
                 amt = [i for i, item in enumerate(g) if is_valid( item[:8], "time" )]
                 if len(amt) == 1:
                     e['c'] = e['T'] = g[amt[0]][:8]
                     e['s'] = a['u'] = True
                     if CSUM: p['u'] = True
+                    e['f'] = [cl, c]
                     e['t'] = amt[0]
-                    e['f'] = c
 
     if e['x'] is not None:
         if g[e['x']][:19] != e['X']:
@@ -335,17 +337,17 @@ def date_time(g: list[str], c: int, a: dict, v: float, e: dict, p: dict) -> None
 
         if e['x'] is not None:
             if not TS_RE.match( g[e['x']][:19] ):
-                a['e'] += 1
+                e['e'] += 1
 
         else:
 
             if e['d'] is not None:
                 if not DT_RE.match( g[e['d']][:10] ):
-                    a['e'] += 1
+                    e['e'] += 1
 
             if e['t'] is not None:
                 if not TM_RE.match( g[e['t']][:8] ):
-                    a['e'] += 1
+                    e['e'] += 1
 
         if e['e'] > 0:
             e['u'] = False
@@ -465,12 +467,15 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
     print(f"{'':>{l+2}}{linex}")
 
 def print_debug_info(c, a, g, cl, cv, co, el, cf):
-    err = f"{co/cl*100:.3f}%" if cl != 0 else 'n/a%'
+    er1 = f"{co/cl*100:.3f}%" if cl else 'n/a%'
+    er2 = f"{(cl-co)/cl*100:.3f}%" if cl else 'n/a%'
     el = f"{el[:3]}..." if len(el)>3 else el
-    ts = f"{c['f']}. line" if c['f'] is not None else 'Undetected'
-    print( f"\n Total in. lines: {cl}\n"
-             f" Processed lines: {co} ({err})\n"
-             f" Error lines:     {cl-co} {el}\n"
+    f1, f2 = c['f']
+    ts = f"{ordinal(f1)} line (attempt {f2}/10)" if f1 else 'Undetected'
+    print( f"\n Total lines:     {cl}\n"
+             f" Processed lines: {co} ({er1})\n"
+             f" Error lines:     {cl-co} ({er2}) {el}\n"
+             f" Error match:     {c['e']}\n"
              f" Values in chart: {cv}\n"
              f" Terminal width:  {a['m']}\n"
              f" Compression:     {cf}\n"
@@ -501,6 +506,12 @@ def reducef(p: list[str], f: int) -> int:
                 max_needed = max(max_needed, pos + 1)
                 break
     return min(max_needed, f)
+
+def ordinal(n: int) -> str:
+    s = {1: "st", 2: "nd", 3: "rd"}
+    teens = 11 <= (n % 100) <= 13
+    suffix = "th" if teens else s.get(n % 10, "th")
+    return f"{n}{suffix}"
 
 def am_digit(p: list[str]) -> int:
     return max((len(s.replace('-', '').split('.')[0]) for s in p), default=0)
@@ -611,7 +622,7 @@ def main():
     colle = { 'u': True,  # I use date/time
               's': False, # Found
               'e': 0,     # 0 = no errors
-              'f': None,  # first d/t value
+              'f': [0,0], # fileline, first TS value
 
               'x': None,  # collumn
               'a': None,  # first - 0000-00-00T00:00:00
@@ -630,7 +641,7 @@ def main():
               'm': get_terminal_width() if XWIDTH is None else XWIDTH,
               'i': { k: True for k in 'ymdHMS' },
 
-              'x': { 'y':[], 'm':[], 'd':[], 'H':[], 'M':[], 'S':[] },
+              'x': { k: [] for k in 'ymdHMS' },
               'X': True,
 
               'd': { 'y':[], 'm':[], 'd':[] },
@@ -701,7 +712,7 @@ def main():
                     counter_value += 1
 
                     if colle['u'] and COLUMN:
-                        date_time(fields, counter_value, axisx, value, colle, grups)
+                        date_time(fields, counter_line, counter_value, axisx, value, colle, grups)
                 except ValueError:
                     if len(err_lines) < 4: err_lines.append(counter_line)
                     continue
