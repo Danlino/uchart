@@ -220,7 +220,7 @@ The `-m` / `--multi` flag forces uchart to plot every individual value instead.
 [^^](#usage)
 
 ---
-##### -c <ins>NUMBER[y|m|d|H|M|S]</ins>, --column <ins>NUMBER[y|m|d|H|M|S]</ins> {#usage-column} 
+##### -c <ins>NUMBER[y|m|d|H|M|S]</ins>, --column <ins>NUMBER[y|m|d|H|M|S]</ins> {#usage-column} <a id="usage-column"></a>
 &emsp;`Specifies which field (column) in the input line to use.`
 
 By default (without `-c`), **uchart** expects **exactly one numeric value per line**.  
