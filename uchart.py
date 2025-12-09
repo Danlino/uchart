@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.9.22"
+__version__ = "0.9.23"
 from itertools import chain, islice
 from datetime import datetime
 from glob import glob
@@ -339,20 +339,23 @@ def date_time(g: list[str], cl: int, c: int, a: dict, v: float, e: dict, p: dict
         if e['x'] is not None:
             for i in ['y','m','d','H','M','S']:
                 if len(a['x'][i]) > a['m']:
-                    a['x'][i] = a['a'][l] = []
+                    a['x'][i] = []
+                    a['a'][i] = []
                     a['i'][i] = False
         else:
 
             if e['t'] is not None:
                 for i in ['H','M','S']:
                     if len(a['t'][i]) > a['m']:
-                        a['t'][i]  = a['c'][l] = []
+                        a['t'][i] = []
+                        a['c'][i] = []
                         a['i'][i] = False
 
             if e['d'] is not None:
                 for i in ['y','m','d']:
                     if len(a['d'][i]) > a['m']:
-                        a['d'][i] = a['b'][l] = []
+                        a['d'][i] = []
+                        a['b'][i] = []
                         a['i'][i] = False
 
         if e['x'] is not None:
@@ -517,13 +520,13 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
     print(f"{'':>{l+2}}{linex}")
 
 def human_bytes(b: int) -> str:
-    units = ["B", "KiB", "MiB", "GiB"]
+    units = ["Bytes", "KiB", "MiB", "GiB"]
     for unit in units:
         if b < 1024 or unit == units[-1]:
             if b == int(b):
-                return f"{int(b)}{unit}"
+                return f"{int(b)} {unit}"
             else:
-                return f"{b:.1f}{unit}".rstrip("0").rstrip(".")
+                return f"{b:.2f}".rstrip("0").rstrip(".") + f" {unit}"
         b /= 1024
     return f"{b:.1f}{unit}"
 
@@ -533,18 +536,18 @@ def print_debug_info(c, a, g, cl, cv, co, el, cf):
     l1, l2, l3, l4 = c['l']
     t1 = f"{human_bytes(bt/c['N'])}/s" if c['N']>0.02 and bt>0 else ''
     el = f"{el[:3]}..." if len(el)>3 else el
-    er1 = f"{co/cl*100:.3f}%" if cl else 'n/a%'
-    ch1 = f"{ch/te*100:.1f}%" if te else 'n/a%'
-    er2 = f"{(cl-co)/cl*100:.3f}%" if cl else 'n/a%'
+    ch1 = f"{ch/te*100:.1f}".rstrip("0").rstrip(".") if te else 'n/a'
+    er1 = f"{co/cl*100:.3f}".rstrip("0").rstrip(".") if cl else 'n/a'
+    er2 = f"{(cl-co)/cl*100:.3f}".rstrip("0").rstrip(".") if cl else 'n/a'
     ts = f"{ordinal(f1)} line (attempt {f2}/10)" if f1 else 'Undetected'
 
     print( f"\n Total lines:     {cl} ({human_bytes(bt)}) {t1}\n"
-             f" Processed lines: {co} ({er1})\n"
-             f" Error lines:     {cl-co} ({er2}) {el}\n"
+             f" Processed lines: {co} ({er1}%)\n"
+             f" Error lines:     {cl-co} ({er2}%) {el}\n"
              f" Error match:     {c['e']}\n"
              f" Values in chart: {cv}\n"
              f" Terminal width:  {te} {'(-x limit)' if XWIDTH else ''}\n"
-             f" Chart width:     {ch} ({ch1})\n"
+             f" Chart width:     {ch} ({ch1}%)\n"
              f" Compression:     {cf}\n"
              f" Amount Σ:        {len(g['g'])}\n"
              f" Hit line/TS/D/T: ({l1},{l2},{l3},{l4})\n"
