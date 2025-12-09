@@ -2,20 +2,18 @@
 &emsp;&emsp;[install](#installation)&emsp;&emsp;[usage](#usage)
 
 ### What <u>uChart</u> is
-- tiny CLI tool for quick charts in the terminal  
-- zero dependencies, single Python script  
-- works on any server you can ssh into  
+- A handy helper for quick analysis of raw logs
+- Tiny CLI tool for quick charts in the terminal  
+- Zero dependencies, single Python script  
 
 
 It reads data from **standard input (stdin)** or directly from **files** given as positional arguments.  
-
-You can also pass a filename pattern (shell glob/wildcard) – uchart will automatically use data from all matching files.
 
 Terminal requirements: UTF-8 and Unicode support (standard in all modern terminals).
 
 **Data format**
 - By default it expects **one number per line**; non-numeric lines are silently ignored.
-- When lines contain **multiple** whitespace- or tab-separated columns, use `-c N` / `--column N` (1-based index) to select which column to plot.
+- When lines contain **multiple** whitespace- or tab-separated columns, use [`-c N`](#usage-column) / [`--column N`](#usage-column) (1-based index) to select which column to plot.
 
 
 ```
@@ -31,7 +29,7 @@ $ seq -20 40 | uchart
     -20.0 │ ⣀⡠⠔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
           └──────────────────────────────────────
 ```
-- By default, the `uchart` uses the full terminal width for rendering the chart. Use the `-x` flag to specify a smaller width.
+- By default, the `uchart` uses the full terminal width for rendering the chart. Use the [`-x`](#usage-width) flag to specify a smaller width.
 
 ```
 $ seq 130 | awk '{print sin($1/10)}' | uchart -x40 -m
@@ -46,10 +44,10 @@ $ seq 130 | awk '{print sin($1/10)}' | uchart -x40 -m
      -1.0 │ ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢦⣀⡠⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢄⣀⡴⠁⠀⠀⠀
           └─────────────────────────────────────────
 ```
-### All values (-m) & Average value
+### All values [(-m)](#usage-multy) & Average value
 
-- With `-m`:&emsp;all raw values from a column are plotted as separate points
-- Without `-m`:&emsp;only the arithmetic mean of the column is shown (default)
+- With [`-m`](#usage-multy):&emsp;all raw values from a column are plotted as separate points
+- Without [`-m`](#usage-multy):&emsp;only the arithmetic mean of the column is shown (default)
 
 ```bash
 awk '/^2025-10-02 15/{print $3}' eufr-2025-10.tsv | uchart -m
@@ -84,14 +82,14 @@ awk '/^2025-10-02 15/{print $3}' eufr-2025-10.tsv | uchart
 uchart does not use SI prefixes (K, M, G, T) or scientific notation in axis legends.  
 With very large or very small numbers, the Y-axis labels would otherwise become excessively wide.
 
-The `-s` / `--shift` option lets you move the decimal point left or right across all values:
+The [`-s`](#usage-shift) / [`--shift`](#usage-shift) option lets you move the decimal point left or right across all values:
 
 - Positive number → shift right (multiply by powers of 10)  
 - Negative number → shift left (divide by powers of 10)  
 
 The value itself specifies how many places to shift.
 
-Additionally, the `-a` / `--add` option adds or subtracts a constant from every value.  
+Additionally, the [`-a`](#usage-add) / [`--add`](#usage-add) option adds or subtracts a constant from every value.  
 This is especially useful for moving a reference value (e.g. the nominal 50 Hz mains frequency) to zero so deviations are easier to read.
 
 - uchart always performs the addition/subtraction first and only afterwards moves/shifts the decimal point.
@@ -117,7 +115,9 @@ Result: the chart is perfectly centered around the ideal 50 Hz (the middle line 
 ![ex1](images/frequency.png)
 
 ### X-axis labels
-When the `-c` switch is used to select the column to be visualized, uchart attempts to find a timestamp in the remaining columns. If it successfully identifies one, it intelligently places tick marks (dots) below the X-axis. These marks represent the boundaries of the most appropriate time interval — for example, the start of a day, month, and so on. If no timestamp is found within the first ten rows, or if the timestamps later disappear from the data, uchart will stop trying to use this smart labeling behavior.
+The [`-c`](#usage-column) option selects which column to plot. When enabled, uchart scans each line for a clear timestamp. If a valid and consistent timestamp is found within the first ten lines, it is used to draw time markers below the X-axis.
+
+uchart automatically chooses the best interval that best fits the data, placing a dot at the start of each period. When enough horizontal space is available after a dot, the corresponding value is displayed next to it in subscript form.
 
 ---
 ### Live data preview example
@@ -134,17 +134,17 @@ watch -n1 "tail -30 /tmp/pingfile | uchart"
 ```
 ---
 ### Unified Y-axis scale (multi-chart)
-When displaying multiple charts side-by-side, use the same `-t` / `--top` and `-b` / `--bottom` values for all of them.  
+When displaying multiple charts side-by-side, use the same [`-t`](#usage-top) / [`--top`](#usage-top) and [`-b`](#usage-bottom) / [`--bottom`](#usage-bottom) values for all of them.  
 This keeps a common Y-axis range and makes the charts visually comparable.
 
 ![multi-chart](images/multichart.png)
 
 ---
-### Aggregated by time unit (y/m/d/H/M/S)
+### Aggregated by time unit ( y,m,d,H,M,S )
 If the input data contains valid timestamps, **uChart can automatically aggregate (sum) values in the selected column** by a chosen time interval.
 
 All you need to tell uChart is the **time unit** to use for aggregation.  
-Specify it right next to the column number after the `-c` switch.
+Specify it right next to the column number after the [`-c`](#usage-column) switch.
 
 **Examples:**
 - `-c 1d` → sums all values from the same day
@@ -153,7 +153,7 @@ Specify it right next to the column number after the `-c` switch.
 
 In the example below, all values fall within a single day, so `-c 1d` aggregates everything into **one bar**.
 
-The screenshot also demonstrates the **debug mode** (`-X`).  
+The screenshot also demonstrates the **debug mode** [`-X`](#usage-debug).  
 The two unprocessed lines at the top are simply the header of the input text file.
 
 ![sum-data](images/sum_data.png)
@@ -166,7 +166,7 @@ curl -fsSL https://raw.githubusercontent.com/Danlino/uchart/main/install.sh | ba
 
 ---
 ### USAGE:
-&emsp;usage: uchart [-h] [-v] [-y] [-x] [-m] [-X] [-c] [-l] [-n] [-t] [-b] [-s] [-a] [-f] [file ...]
+&emsp;uchart [[-h]](#usage-help) [[-v]](#usage-version) [[-y]](#usage-height) [[-x]](#usage-width) [[-m]](#usage-multy) [[-X]](#usage-debug) [[-c]](#usage-column) [[-l]](#usage-legend) [[-n]](#usage-stat) [[-t]](#usage-top) [[-b]](#usage-bottom) [[-s]](#usage-shift) [[-a]](#usage-add) [[-f]](#usage-sep) [file ...]
 
 _**positional arguments:**_  
 **file**  
@@ -175,40 +175,52 @@ _**positional arguments:**_
 
 _**options:**_  
 
-**-h**, --help  
+##### -h, --help {#usage-help} 
 &emsp;`Show help message and exit.`
 
----
-**-v**, --version  
-&emsp;`Show program's version number and exit.`
+[^^](#usage)
 
 ---
-**-y** <ins>NUMBER</ins>, --height <ins>NUMBER</ins>  
+##### -v, --version {#usage-version}  
+&emsp;`Show program's version number and exit.`
+
+[^^](#usage)
+
+---
+##### -y <ins>NUMBER</ins>, --height <ins>NUMBER</ins> {#usage-height} 
 &emsp;`Chart height in lines. (default: 7)`
 
 Minimum height of the chart is 2 terminal rows. Values less than 2 are forced to 2.
 
+[^^](#usage)
+
 ---
-**-x** <ins>NUMBER</ins>, --width <ins>NUMBER</ins>  
+##### -x <ins>NUMBER</ins>, --width <ins>NUMBER</ins> {#usage-width} 
 &emsp;`Maximum chart width in characters.`
 
 uchart automatically fits the terminal width by default.
 Since the X-axis is linear and all columns have the same number of samples, the final width is rounded down. This means the chart may end up substantially narrower than the window.
 With the `-x` / `--width` option you can set a custom maximum chart width (different from the terminal window width).
 
+[^^](#usage)
+
 ---
-**-m**, --multi  
+##### -m, --multi {#usage-multy} 
 &emsp;`Do not display average multiple values per column; show all points.`
 
 By default, when a column contains multiple values, uchart plots only a single point representing the arithmetic mean of all values in that column. This can hide peak/outlier values.
 The `-m` / `--multi` flag forces uchart to plot every individual value instead.
 
----
-**-X**, --debug-mode  
-&emsp;`Additional information about the processing of input data.`
+[^^](#usage)
 
 ---
-**-c** <ins>NUMBER[y|m|d|H|M|S]</ins>, --column <ins>NUMBER[y|m|d|H|M|S]</ins>  
+##### -X, --debug-mode {#usage-debug} 
+&emsp;`Additional information about the processing of input data.`
+
+[^^](#usage)
+
+---
+##### -c <ins>NUMBER[y|m|d|H|M|S]</ins>, --column <ins>NUMBER[y|m|d|H|M|S]</ins> {#usage-column} 
 &emsp;`Specifies which field (column) in the input line to use.`
 
 By default (without `-c`), **uchart** expects **exactly one numeric value per line**.  
@@ -219,26 +231,33 @@ Use the `-c N` / `--column N` option to select a specific column from space- or 
 - N is 1-based (first column = 1)
 - If a line has fewer than `N` columns, it is skipped
 
-Can now include time unit modifier [y]ear, [m]onth, [d]ay, [H]our, [M]inute, [S]econd. Values within the same time period are summed into one bar.
-Example: '5H' or 'H5' = total for that hour from timestamp data.
+Can now include time unit modifier [**y**]ear, [**m**]onth, [**d**]ay, [**H**]our, [**M**]inute, [**S**]econd. Values within the same time period are **summed** into one bar.
+
+Example: '5**H**' or '**H**5' = total for that **hour** from timestamp data.
 This function excels at aggregating and visualizing high volumes of discrete events over time periods. For example: counting errors, requests, or status changes per minute/hour/day in log files.
 
+[^^](#usage)
+
 ---
-**-l**, --no-legend  
+##### -l, --no-legend {#usage-legend} 
 &emsp;`Do not display the chart legend.`
 
----
-**-n**, --no-stat  
-&emsp;`Do not display the chart stat.`
+[^^](#usage)
 
 ---
-**-t** <ins>NUMBER</ins>, --top-value <ins>NUMBER</ins>  
+##### -n, --no-stat {#usage-stat}  
+&emsp;`Do not display the chart stat.`
+
+[^^](#usage)
+
+---
+##### -t <ins>NUMBER</ins>, --top-value <ins>NUMBER</ins> {#usage-top} 
 &emsp;`Maximum value in chart. (upper limit of Y-axis)`
 
 Sets a hard ceiling for displayed values.  
 Any value greater than the specified limit is **clipped** and drawn at the top of the chart.
 
-**-b** <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins>  
+##### -b <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins> {#usage-bottom} 
 &emsp;`Minimum value in chart. (lower limit of Y-axis)`
 
 Same functionality as `-t`, but for the lower boundary.
@@ -248,9 +267,10 @@ Useful for:
 - focusing on the relevant range
 - stabilizing the scale with noisy data
 
+[^^](#usage)
 
 ---
-**-s** <ins>NUMBER</ins>, --shift <ins>NUMBER</ins>  
+##### -s <ins>NUMBER</ins>, --shift <ins>NUMBER</ins> {#usage-shift}  
 &emsp;`Shift the decimal point left or right. (default: 0)`
 
 uchart does not use scientific notation or SI prefixes (K, M, G…) in the Y-axis legend.  
@@ -280,18 +300,24 @@ Range: -15 to +15 (10⁻¹⁵ to 10¹⁵)
 
 - If the entered value is outside this range, the option will be automatically disabled and will have no effect.
 
+[^^](#usage)
+
 ---
-**-a** <ins>NUMBER</ins>, --add <ins>NUMBER></ins>
+##### -a <ins>NUMBER</ins>, --add <ins>NUMBER></ins> {#usage-add}
 &emsp;`The constant that will be added to each item. (default: 0)`
 
 Option adds or subtracts a constant from every value.
 
+[^^](#usage)
+
 ---
-**-f** <ins>SEP</ins>, --format <ins>SEP</ins>  
+##### -f <ins>SEP</ins>, --format <ins>SEP</ins> {#usage-sep}  
 &emsp;`If numbers contain thousands separator, specify it: ',' or '.' (e.g. -f ,)`
 
 Number formatting varies across the world (e.g. 1,234.56 vs 1.234,56).  
 Because of this, uchart cannot always reliably tell which character is the thousands separator and which is the decimal separator.
+
+[^^](#usage)
 
 ---
 Sample data structure in the examples.
