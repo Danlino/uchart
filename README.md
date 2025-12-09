@@ -175,19 +175,19 @@ _**positional arguments:**_
 
 _**options:**_  
 
-##### -h, --help {#usage-help} 
+##### -h, --help <a id="usage-help"></a>  
 &emsp;`Show help message and exit.`
 
 [^^](#usage)
 
 ---
-##### -v, --version {#usage-version}  
+##### -v, --version <a id="usage-version"></a>  
 &emsp;`Show program's version number and exit.`
 
 [^^](#usage)
 
 ---
-##### -y <ins>NUMBER</ins>, --height <ins>NUMBER</ins> {#usage-height} 
+##### -y <ins>NUMBER</ins>, --height <ins>NUMBER</ins> <a id="usage-heigth"></a>  
 &emsp;`Chart height in lines. (default: 7)`
 
 Minimum height of the chart is 2 terminal rows. Values less than 2 are forced to 2.
@@ -195,7 +195,7 @@ Minimum height of the chart is 2 terminal rows. Values less than 2 are forced to
 [^^](#usage)
 
 ---
-##### -x <ins>NUMBER</ins>, --width <ins>NUMBER</ins> {#usage-width} 
+##### -x <ins>NUMBER</ins>, --width <ins>NUMBER</ins> <a id="usage-width"></a>  
 &emsp;`Maximum chart width in characters.`
 
 uchart automatically fits the terminal width by default.
@@ -205,7 +205,7 @@ With the `-x` / `--width` option you can set a custom maximum chart width (diffe
 [^^](#usage)
 
 ---
-##### -m, --multi {#usage-multy} 
+##### -m, --multi <a id="usage-multy"></a>  
 &emsp;`Do not display average multiple values per column; show all points.`
 
 By default, when a column contains multiple values, uchart plots only a single point representing the arithmetic mean of all values in that column. This can hide peak/outlier values.
@@ -214,13 +214,13 @@ The `-m` / `--multi` flag forces uchart to plot every individual value instead.
 [^^](#usage)
 
 ---
-##### -X, --debug-mode {#usage-debug} 
+##### -X, --debug-mode <a id="usage-column"></a> <a id="usage-debug"></a>  
 &emsp;`Additional information about the processing of input data.`
 
 [^^](#usage)
 
 ---
-##### -c <ins>NUMBER[y|m|d|H|M|S]</ins>, --column <ins>NUMBER[y|m|d|H|M|S]</ins> <a id="usage-column"></a>
+##### -c <ins>NUMBER[y|m|d|H|M|S]</ins>, --column <ins>NUMBER[y|m|d|H|M|S]</ins> <a id="usage-column"></a>  
 &emsp;`Specifies which field (column) in the input line to use.`
 
 By default (without `-c`), **uchart** expects **exactly one numeric value per line**.  
@@ -239,25 +239,25 @@ This function excels at aggregating and visualizing high volumes of discrete eve
 [^^](#usage)
 
 ---
-##### -l, --no-legend {#usage-legend} 
+##### -l, --no-legend <a id="usage-legend"></a>  
 &emsp;`Do not display the chart legend.`
 
 [^^](#usage)
 
 ---
-##### -n, --no-stat {#usage-stat}  
+##### -n, --no-stat <a id="usage-stat"></a>  
 &emsp;`Do not display the chart stat.`
 
 [^^](#usage)
 
 ---
-##### -t <ins>NUMBER</ins>, --top-value <ins>NUMBER</ins> {#usage-top} 
+##### -t <ins>NUMBER</ins>, --top-value <ins>NUMBER</ins> <a id="usage-top"></a> 
 &emsp;`Maximum value in chart. (upper limit of Y-axis)`
 
 Sets a hard ceiling for displayed values.  
 Any value greater than the specified limit is **clipped** and drawn at the top of the chart.
 
-##### -b <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins> {#usage-bottom} 
+##### -b <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins> <a id="usage-column"></a>{#usage-bottom} 
 &emsp;`Minimum value in chart. (lower limit of Y-axis)`
 
 Same functionality as `-t`, but for the lower boundary.
@@ -270,7 +270,7 @@ Useful for:
 [^^](#usage)
 
 ---
-##### -s <ins>NUMBER</ins>, --shift <ins>NUMBER</ins> {#usage-shift}  
+##### -s <ins>NUMBER</ins>, --shift <ins>NUMBER</ins> <a id="usage-shift"></a>  
 &emsp;`Shift the decimal point left or right. (default: 0)`
 
 uchart does not use scientific notation or SI prefixes (K, M, G…) in the Y-axis legend.  
@@ -303,7 +303,7 @@ Range: -15 to +15 (10⁻¹⁵ to 10¹⁵)
 [^^](#usage)
 
 ---
-##### -a <ins>NUMBER</ins>, --add <ins>NUMBER></ins> {#usage-add}
+##### -a <ins>NUMBER</ins>, --add <ins>NUMBER></ins> <a id="usage-add"></a>  
 &emsp;`The constant that will be added to each item. (default: 0)`
 
 Option adds or subtracts a constant from every value.
@@ -311,7 +311,7 @@ Option adds or subtracts a constant from every value.
 [^^](#usage)
 
 ---
-##### -f <ins>SEP</ins>, --format <ins>SEP</ins> {#usage-sep}  
+##### -f <ins>SEP</ins>, --format <ins>SEP</ins> <a id="usage-sep"></a>  
 &emsp;`If numbers contain thousands separator, specify it: ',' or '.' (e.g. -f ,)`
 
 Number formatting varies across the world (e.g. 1,234.56 vs 1.234,56).  
