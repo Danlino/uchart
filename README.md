@@ -257,7 +257,7 @@ This function excels at aggregating and visualizing high volumes of discrete eve
 Sets a hard ceiling for displayed values.  
 Any value greater than the specified limit is **clipped** and drawn at the top of the chart.
 
-##### -b <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins> <a id="usage-column"></a>{#usage-bottom} 
+##### -b <ins>NUMBER</ins>, --bottom-value <ins>NUMBER</ins> <a id="usage-bottom"></a>  
 &emsp;`Minimum value in chart. (lower limit of Y-axis)`
 
 Same functionality as `-t`, but for the lower boundary.
