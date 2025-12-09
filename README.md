@@ -187,7 +187,7 @@ _**options:**_
 [^^](#usage)
 
 ---
-##### -y <ins>NUMBER</ins>, --height <ins>NUMBER</ins> <a id="usage-heigth"></a>  
+##### -y <ins>NUMBER</ins>, --height <ins>NUMBER</ins> <a id="usage-height"></a>  
 &emsp;`Chart height in lines. (default: 7)`
 
 Minimum height of the chart is 2 terminal rows. Values less than 2 are forced to 2.
@@ -214,7 +214,7 @@ The `-m` / `--multi` flag forces uchart to plot every individual value instead.
 [^^](#usage)
 
 ---
-##### -X, --debug-mode <a id="usage-column"></a> <a id="usage-debug"></a>  
+##### -X, --debug-mode <a id="usage-debug"></a>  
 &emsp;`Additional information about the processing of input data.`
 
 [^^](#usage)
