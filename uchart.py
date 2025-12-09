@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-__version__ = "0.9.21"
+__version__ = "0.9.22"
+from itertools import chain, islice
 from datetime import datetime
 from glob import glob
 import argparse
@@ -154,7 +155,7 @@ TIME_PARTS = [(0,2,'H'),
 TS_RE = re.compile( r'^\d{4}-'                # y 0000-9999
                     r'(0[1-9]|1[0-2])-'       # m 01–12
                     r'(0[1-9]|[12]\d|3[01])'  # d 01–31
-                    r'T'
+                    r'[T_]'
                     r'([01]\d|2[0-3])'        # H 00–23
                     r':[0-5]\d'               # M 00–59
                     r':[0-5]\d')              # S 00–59
@@ -174,14 +175,23 @@ def get_terminal_width() -> int:
     except:
         return 80
 
+def detect_input(preview):
+    pass
+
 def is_valid(s: str, mode: str) -> bool:
-    if mode == 'tist': ftm = ("%Y-%m-%dT%H:%M:%S",)
-    elif mode == 'date': ftm = ("%Y-%m-%d", "%Y/%m/%d")
-    elif mode == 'time' and len(s) == 8:
-        ftm = ("%H:%M:%S", "%H.%M.%S")
-    elif mode == 'time' and len(s) == 5:
-        ftm = ("%H:%M",)
-    else: return False
+    if   mode == 'ts':
+        ftm = ( "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%d_%H:%M:%S" )
+    elif mode == 'dt':
+        ftm = ( "%Y-%m-%d",
+                "%Y/%m/%d"          )
+    elif mode == 'ti' and len(s) == 8:
+        ftm = ( "%H:%M:%S",
+                "%H.%M.%S"          )
+    elif mode == 'ti' and len(s) == 5:
+        ftm = ( "%H:%M",            )
+    else:
+        return False
 
     for f in ftm:
         try:
@@ -245,7 +255,8 @@ def date_time(g: list[str], cl: int, c: int, a: dict, v: float, e: dict, p: dict
             return None
 
         else:
-            amx = [i for i, item in enumerate(g) if is_valid( item[:19], "tist" )]
+            amx = [i for i, item in enumerate(g) if is_valid( item[:19], "ts" )]
+            e['l'][1] += len(amx)
             if len(amx) == 1:
                 e['a'] = e['X'] = g[amx[0]][:19]
                 e['s'] = a['u'] = True
@@ -255,7 +266,8 @@ def date_time(g: list[str], cl: int, c: int, a: dict, v: float, e: dict, p: dict
 
             else:
 
-                amd = [i for i, item in enumerate(g) if is_valid( item[:10], "date" )]
+                amd = [i for i, item in enumerate(g) if is_valid( item[:10], "dt" )]
+                e['l'][2] += len(amd)
                 if len(amd) == 1:
                     e['b'] = e['D'] = g[amd[0]][:10]
                     e['s'] = a['u'] = True
@@ -263,13 +275,15 @@ def date_time(g: list[str], cl: int, c: int, a: dict, v: float, e: dict, p: dict
                     e['f'] = [cl, c]
                     e['d'] = amd[0]
 
-                amt = [i for i, item in enumerate(g) if is_valid( item[:8], "time" )]
+                amt = [i for i, item in enumerate(g) if is_valid( item[:8], "ti" )]
+                e['l'][3] += len(amt)
                 if len(amt) == 1:
                     e['c'] = e['T'] = g[amt[0]][:8]
                     e['s'] = a['u'] = True
                     if CSUM: p['u'] = True
                     e['f'] = [cl, c]
                     e['t'] = amt[0]
+            e['l'][0] += 1
 
     if e['x'] is not None:
         if g[e['x']][:19] != e['X']:
@@ -278,10 +292,12 @@ def date_time(g: list[str], cl: int, c: int, a: dict, v: float, e: dict, p: dict
                 if toend:
                     if a['i'][l]:
                         a['x'][l].append(c)
+                        a['a'][l].append(g[e['x']][s1:s2])
                 else:
                     if e['X'][s1:s2] != g[e['x']][s1:s2]:
                         if a['i'][l]:
                             a['x'][l].append(c)
+                            a['a'][l].append(g[e['x']][s1:s2])
                         toend = True
             e['X'] = g[e['x']][:19] 
 
@@ -293,24 +309,28 @@ def date_time(g: list[str], cl: int, c: int, a: dict, v: float, e: dict, p: dict
                     if toend:
                         if a['i'][l]:
                             a['d'][l].append(c)
+                            a['b'][l].append(g[e['d']][s1:s2])
                     else:
                         if e['D'][s1:s2] != g[e['d']][s1:s2]:
                             if a['i'][l]:
                                 a['d'][l].append(c)
+                                a['b'][l].append(g[e['d']][s1:s2])
                             toend = True
                 e['D'] = g[e['d']][:10] 
 
         if e['t'] is not None:
-            if g[e['t']][:10] != e['T']:
+            if g[e['t']][:8] != e['T']:
                 toend = False
                 for s1, s2, l in TIME_PARTS:
                     if toend:
                         if a['i'][l]:
                             a['t'][l].append(c)
+                            a['c'][l].append(g[e['t']][s1:s2])
                     else:
                         if e['T'][s1:s2] != g[e['t']][s1:s2]:
                             if a['i'][l]:
                                 a['t'][l].append(c)
+                                a['c'][l].append(g[e['t']][s1:s2])
                             toend = True
                 e['T'] = g[e['t']][:8] 
 
@@ -319,20 +339,20 @@ def date_time(g: list[str], cl: int, c: int, a: dict, v: float, e: dict, p: dict
         if e['x'] is not None:
             for i in ['y','m','d','H','M','S']:
                 if len(a['x'][i]) > a['m']:
-                    a['x'][i] = []
+                    a['x'][i] = a['a'][l] = []
                     a['i'][i] = False
         else:
 
             if e['t'] is not None:
                 for i in ['H','M','S']:
                     if len(a['t'][i]) > a['m']:
-                        a['t'][i] = []
+                        a['t'][i]  = a['c'][l] = []
                         a['i'][i] = False
 
             if e['d'] is not None:
                 for i in ['y','m','d']:
                     if len(a['d'][i]) > a['m']:
-                        a['d'][i] = []
+                        a['d'][i] = a['b'][l] = []
                         a['i'][i] = False
 
         if e['x'] is not None:
@@ -423,15 +443,20 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
         print(f"{'':>{l}} └{'─' * b}")
         return None
 
-    ml = int(b * 0.7)
+    ml = int(b * 0.5)
 
     if e['d'] is not None or e['t'] is not None:
         x = { k: a['d' if k in 'ymd' else 't'][k]
               for k in 'ymdHMS'
               if 0 < len(a['d' if k in 'ymd' else 't'][k]) < ml }
+        v = { k: a['b' if k in 'ymd' else 'c'][k]
+              for k in 'ymdHMS'
+              if 0 < len(a['b' if k in 'ymd' else 'c'][k]) < ml }
+
 
     if e['x'] is not None:
         x = { k: a['x'][k] for k in 'ymdHMS' if 0 < len(a['x'][k]) < ml }
+        v = { k: a['a'][k] for k in 'ymdHMS' if 0 < len(a['a'][k]) < ml }
 
     if len(x) == 0:
         print(f"{'':>{l}} └{'─' * b}")
@@ -440,13 +465,16 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
     if len(x) > 1:
         lkey = max(x, key=lambda k: len(x[k]))
         x = {lkey: x[lkey]}
+        vkey = max(v, key=lambda k: len(v[k]))
+        v = {lkey: v[vkey]}
     else:
         lkey = list(x.keys())[0]
+        vkey = list(v.keys())[0]
 
     positions = x[lkey]
     total_braille_cols = 2 * b
 
-    line = [' '] * b
+    line1 = [' '] * b
 
     for pos in positions:
         col = pos // c
@@ -458,28 +486,68 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
 
         bit = 1 << (0 if not is_right else 3)
 
-        current = ord(line[term_col]) - 0x2800 if line[term_col] != ' ' else 0
+        current = ord(line1[term_col]) - 0x2800 if line1[term_col] != ' ' else 0
         new_val = current | bit
-        line[term_col] = chr(0x2800 + new_val)
+        line1[term_col] = chr(0x2800 + new_val)
 
-    linex = ''.join(line)
+    line2 = line1[:]
+    positions_reverse = x[lkey][::-1]
+    values_reverse = v[vkey][::-1]
+    
+    for pos, val in zip (positions_reverse, values_reverse):
+
+        col = int(pos) // (int(c) * 2)
+        paint = True
+            
+        for i, iv in enumerate(val+'..'):
+            try:
+                if line2[col+i+1] != ' ':
+                    paint = False
+            except:
+                paint = False
+        if paint:
+            for i, iv in enumerate(val):
+                line2[col+i+1] = iv
+        
+    trans = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+    linex = ''.join(line2).translate(trans)
+
+
     print(f"{LEGEND[lkey]}{'':>{l-9}} └{'─' * b}")
     print(f"{'':>{l+2}}{linex}")
 
+def human_bytes(b: int) -> str:
+    units = ["B", "KiB", "MiB", "GiB"]
+    for unit in units:
+        if b < 1024 or unit == units[-1]:
+            if b == int(b):
+                return f"{int(b)}{unit}"
+            else:
+                return f"{b:.1f}{unit}".rstrip("0").rstrip(".")
+        b /= 1024
+    return f"{b:.1f}{unit}"
+
 def print_debug_info(c, a, g, cl, cv, co, el, cf):
-    er1 = f"{co/cl*100:.3f}%" if cl else 'n/a%'
-    er2 = f"{(cl-co)/cl*100:.3f}%" if cl else 'n/a%'
-    el = f"{el[:3]}..." if len(el)>3 else el
+    ch, te, bt = a['M'], a['m'], c['B']
     f1, f2 = c['f']
+    l1, l2, l3, l4 = c['l']
+    t1 = f"{human_bytes(bt/c['N'])}/s" if c['N']>0.02 and bt>0 else ''
+    el = f"{el[:3]}..." if len(el)>3 else el
+    er1 = f"{co/cl*100:.3f}%" if cl else 'n/a%'
+    ch1 = f"{ch/te*100:.1f}%" if te else 'n/a%'
+    er2 = f"{(cl-co)/cl*100:.3f}%" if cl else 'n/a%'
     ts = f"{ordinal(f1)} line (attempt {f2}/10)" if f1 else 'Undetected'
-    print( f"\n Total lines:     {cl}\n"
+
+    print( f"\n Total lines:     {cl} ({human_bytes(bt)}) {t1}\n"
              f" Processed lines: {co} ({er1})\n"
              f" Error lines:     {cl-co} ({er2}) {el}\n"
              f" Error match:     {c['e']}\n"
              f" Values in chart: {cv}\n"
-             f" Terminal width:  {a['m']}\n"
+             f" Terminal width:  {te} {'(-x limit)' if XWIDTH else ''}\n"
+             f" Chart width:     {ch} ({ch1})\n"
              f" Compression:     {cf}\n"
              f" Amount Σ:        {len(g['g'])}\n"
+             f" Hit line/TS/D/T: ({l1},{l2},{l3},{l4})\n"
              f" First timestamp: {ts}\n"
              f" f: TS='{c['a']}', D='{c['b']}', T='{c['c']}'\n"
              f" l: TS='{c['X']}', D='{c['D']}', T='{c['T']}'\n", file=sys.stderr)
@@ -601,7 +669,7 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
         print(line)
 
     if SHOWLEGEND:
-        num_braille_chars = (len(values_for_plot) + 1) // 2
+        num_braille_chars = axisx['M'] = (len(values_for_plot) + 1) // 2
 
         if axisx['u']:
             print_x_legend(axisx, colle, grups, nega+long_numbers+3, num_braille_chars, compression_factor)
@@ -610,7 +678,7 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
 
 
 def main():
-
+    size = 0
     args = get_arg()
     raw_values = []
     err_lines = []
@@ -623,6 +691,9 @@ def main():
               's': False, # Found
               'e': 0,     # 0 = no errors
               'f': [0,0], # fileline, first TS value
+              'l': [0,0,0,0], # amount l/ts/d/t
+              'B': 0,     # data size, 
+              'N': 0,     # load time
 
               'x': None,  # collumn
               'a': None,  # first - 0000-00-00T00:00:00
@@ -639,15 +710,19 @@ def main():
 
     axisx = { 'u': False, 
               'm': get_terminal_width() if XWIDTH is None else XWIDTH,
+              'M': 0,
               'i': { k: True for k in 'ymdHMS' },
 
               'x': { k: [] for k in 'ymdHMS' },
+              'a': { k: [] for k in 'ymdHMS' },
               'X': True,
 
               'd': { 'y':[], 'm':[], 'd':[] },
+              'b': { 'y':[], 'm':[], 'd':[] },
               'D': True,
 
               't': { 'H':[], 'M':[], 'S':[] },
+              'c': { 'H':[], 'M':[], 'S':[] },
               'T': True,
             }
 
@@ -689,9 +764,14 @@ def main():
                         print(f"Error reading {f_path}: {e}", file=sys.stderr)
 
             datain = multi_file_stream(file_list)
+
+    preview = list(islice(datain, 10))
+    detect_input(preview)
+    start_data_load = datetime.now()
     try:
-        for line in datain:
+        for line in chain(preview, datain):
             counter_line += 1
+            size += len(line)
             if COLUMN:
                 fields = line.split()
                 if len(fields) < COLUMN:
@@ -716,7 +796,9 @@ def main():
                 except ValueError:
                     if len(err_lines) < 4: err_lines.append(counter_line)
                     continue
-
+        
+        end_data_load = datetime.now()
+        colle['B'] = size
         old_counter_value = counter_value
         if grups['u']:
             raw_values, long_numbers, counter_value = group_by_time(raw_values, long_numbers, counter_value, colle, grups)
@@ -746,7 +828,8 @@ def main():
                 val_for_plot = group_values_for_multi(raw_values, compression_factor)
             else:
                 val_for_plot = average_values_in_groups(raw_values, compression_factor)
-
+            
+            colle['N'] = (end_data_load - start_data_load).total_seconds()
             draw_graph(val_for_plot, raw_values, compression_factor, long_numbers,
                        long_floatpa, axisx, colle, grups, counter_line, counter_value)
 
