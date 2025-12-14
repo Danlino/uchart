@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.9.23"
+__version__ = "0.9.24"
 from itertools import chain, islice
 from datetime import datetime
 from glob import glob
@@ -26,7 +26,7 @@ def _handle_sigint(signum, frame):
 signal.signal(signal.SIGINT, _handle_sigint)
 
 def get_arg():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-v', '--version', action='version',
                         version=f"uChart {__version__}")
     parser.add_argument('-y', '--height',
@@ -65,9 +65,18 @@ def get_arg():
     parser.add_argument('-f', '--format',
                         type=str, choices=[',', '.'], dest='separator', default=None, metavar='SEP',
                         help="If numbers contain thousands separator, specify it: ',' or '.' (e.g. -f ,)")
-    parser.add_argument('file', nargs='*', default=None,
+    parser.add_argument('file', nargs='*', default=[],
                         help='The input data file, if not specified, is read from stdin.')
-    args = parser.parse_args()
+    parser.epilog = ( f"optional time filters:\n"
+                      f"   target=  requested period only\n"
+                      f"   from=    requested period start (including)\n"
+                      f"   to=      requested period end (including)\n"
+                      f"\n"
+                      f"   Supported formats:\n"
+                      f"   yyyy | yyyy-mm | yyyy-mm-dd | yyyy-mm-ddThh |\n" 
+                      f"   yyyy-mm-ddThh:mm | yyyy-mm-ddThh:mm:ss\n")
+    
+    args = parser.parse_args(clean_args)
 
     if len(sys.argv) == 1 and sys.stdin.isatty():
         parser.print_help()
@@ -82,7 +91,6 @@ def get_shift(shft: int | None) -> float | int:
     return 10 ** shft
 
 def column_choice(s: str | None):
-
     if s:
         s = re.sub(r'[^a-zA-Z0-9]', '', s)
 
@@ -103,93 +111,38 @@ def column_choice(s: str | None):
 
     return None, None
 
-arg = get_arg()
-
-COLUMN, CSUM = column_choice(arg.column)
-SHFT         = get_shift(arg.shft)
-MULTIV       = arg.multi_value
-SHOWLEGEND   = arg.show_legend
-SHOWSTATS    = arg.show_stat
-SEPA         = arg.separator
-DOWNV        = arg.bottomv
-YHEIGHT      = arg.height
-DEBUGFLAG    = arg.debug
-XWIDTH       = arg.width
-ADDM         = arg.addm
-TOPVAL       = arg.topv
-
-YHEIGHT = 2 if YHEIGHT < 2 else YHEIGHT
-XWIDTH  = None if XWIDTH is not None and XWIDTH < 1 else XWIDTH
-if TOPVAL is not None and DOWNV is not None and TOPVAL <= DOWNV:
-    TOPVAL = DOWNV = None
-
-LEGEND = {    'y': 'years >  ',
-              'm': 'months > ',
-              'd': 'days >   ',
-              'H': 'hours >  ',
-              'M': 'minutes >',
-              'S': 'seconds >',}
-
-SUM_LEGEND = {'y': 'year Σ   ',
-              'm': 'month Σ  ',
-              'd': 'day Σ    ',
-              'H': 'hour Σ   ',
-              'M': 'min Σ    ',
-              'S': 'sec Σ    ',}
-
-ISO_PARTS = [ (0,  4, "y"),
-              (5,  7, "m"),
-              (8, 10, "d"),
-              (11,13, "H"),
-              (14,16, "M"),
-              (17,19, "S"),]
-
-DATE_PARTS = [(0, 4,'y'),
-              (5, 7,'m'),
-              (8,10,'d'),]
-
-TIME_PARTS = [(0,2,'H'),
-              (3,5,'M'),
-              (6,8,'S'),]
-
-TS_RE = re.compile( r'^\d{4}-'                # y 0000-9999
-                    r'(0[1-9]|1[0-2])-'       # m 01–12
-                    r'(0[1-9]|[12]\d|3[01])'  # d 01–31
-                    r'[T_]'
-                    r'([01]\d|2[0-3])'        # H 00–23
-                    r':[0-5]\d'               # M 00–59
-                    r':[0-5]\d')              # S 00–59
-
-DT_RE = re.compile( r'^\d{4}[-/]'             # y 0000-9999
-                    r'(0[1-9]|1[0-2])[-/]'    # m 01–12
-                    r'(0[1-9]|[12]\d|3[01])') # d 01–31
-
-TM_RE = re.compile( r'^([01]\d|2[0-3])'       # H 00-23
-                    r'[:.][0-5]\d'            # M 00-59
-                    r'(?:[:.][0-5]\d)?$')     # S 00-59 if is
-
-
 def get_terminal_width() -> int:
     try:
         return os.get_terminal_size().columns
     except:
         return 80
 
+# TODO(later): Use in future versions
 def detect_input(preview):
     pass
 
 def is_valid(s: str, mode: str) -> bool:
+    
     if   mode == 'ts':
         ftm = ( "%Y-%m-%dT%H:%M:%S",
                 "%Y-%m-%d_%H:%M:%S" )
     elif mode == 'dt':
         ftm = ( "%Y-%m-%d",
-                "%Y/%m/%d"          )
+                "%Y/%m/%d" )
     elif mode == 'ti' and len(s) == 8:
         ftm = ( "%H:%M:%S",
-                "%H.%M.%S"          )
+                "%H.%M.%S" )
     elif mode == 'ti' and len(s) == 5:
-        ftm = ( "%H:%M",            )
+        ftm = ( "%H:%M",   )
+
+    elif mode == 'f1':
+        ft = '  %Y-%m-%dT%H:%M:%S'
+        for _, s2, _ in ISO_PARTS:
+            if len(s) == s2:
+                ftm = ( ft[:s2].strip(), )
+                break
+        else:
+            return False
     else:
         return False
 
@@ -199,6 +152,7 @@ def is_valid(s: str, mode: str) -> bool:
             return True
         except ValueError:
             continue
+
     return False
 
 def create_braille_char(dots):
@@ -245,45 +199,7 @@ def group_values_for_multi(values_list, group_size):
             result.append(group)
     return result
 
-
-def date_time(g: list[str], cl: int, c: int, a: dict, v: float, e: dict, p: dict) -> None:
-
-    if 1 <= c <= 11 and e['s'] is False:
-
-        if c == 11:
-            e['u'] = False
-            return None
-
-        else:
-            amx = [i for i, item in enumerate(g) if is_valid( item[:19], "ts" )]
-            e['l'][1] += len(amx)
-            if len(amx) == 1:
-                e['a'] = e['X'] = g[amx[0]][:19]
-                e['s'] = a['u'] = True
-                if CSUM: p['u'] = True
-                e['f'] = [cl, c]
-                e['x'] = amx[0]
-
-            else:
-
-                amd = [i for i, item in enumerate(g) if is_valid( item[:10], "dt" )]
-                e['l'][2] += len(amd)
-                if len(amd) == 1:
-                    e['b'] = e['D'] = g[amd[0]][:10]
-                    e['s'] = a['u'] = True
-                    if CSUM: p['u'] = True
-                    e['f'] = [cl, c]
-                    e['d'] = amd[0]
-
-                amt = [i for i, item in enumerate(g) if is_valid( item[:8], "ti" )]
-                e['l'][3] += len(amt)
-                if len(amt) == 1:
-                    e['c'] = e['T'] = g[amt[0]][:8]
-                    e['s'] = a['u'] = True
-                    if CSUM: p['u'] = True
-                    e['f'] = [cl, c]
-                    e['t'] = amt[0]
-            e['l'][0] += 1
+def date_time(g: list[str], c: int, a: dict, v: float, e: dict, p: dict) -> None:
 
     if e['x'] is not None:
         if g[e['x']][:19] != e['X']:
@@ -437,7 +353,6 @@ def group_by_time(r: list, l: int, c: int, e: dict, p: dict):
     return r, l, c
 
 def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
-
     if CSUM:
         print(f"{SUM_LEGEND[CSUM]}{'':>{l-9}} └{'─' * b}")
         return None
@@ -455,7 +370,6 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
         v = { k: a['b' if k in 'ymd' else 'c'][k]
               for k in 'ymdHMS'
               if 0 < len(a['b' if k in 'ymd' else 'c'][k]) < ml }
-
 
     if e['x'] is not None:
         x = { k: a['x'][k] for k in 'ymdHMS' if 0 < len(a['x'][k]) < ml }
@@ -495,18 +409,20 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
 
     line2 = line1[:]
     positions_reverse = x[lkey][::-1]
-    values_reverse = v[vkey][::-1]
+    values_reverse = [s.lstrip('0') or '0' for s in v[vkey][::-1]]
     
     for pos, val in zip (positions_reverse, values_reverse):
 
         col = int(pos) // (int(c) * 2)
         paint = True
-            
-        for i, iv in enumerate(val+'..'):
+
+        space = 2 if SPACE is None else SPACE
+
+        for i, _ in enumerate(val+'.'*space):
             try:
                 if line2[col+i+1] != ' ':
                     paint = False
-            except:
+            except IndexError:
                 paint = False
         if paint:
             for i, iv in enumerate(val):
@@ -514,7 +430,6 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
         
     trans = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
     linex = ''.join(line2).translate(trans)
-
 
     print(f"{LEGEND[lkey]}{'':>{l-9}} └{'─' * b}")
     print(f"{'':>{l+2}}{linex}")
@@ -534,26 +449,31 @@ def print_debug_info(c, a, g, cl, cv, co, el, cf):
     ch, te, bt = a['M'], a['m'], c['B']
     f1, f2 = c['f']
     l1, l2, l3, l4 = c['l']
+    sk, se = c['p'], c['P']
     t1 = f"{human_bytes(bt/c['N'])}/s" if c['N']>0.02 and bt>0 else ''
     el = f"{el[:3]}..." if len(el)>3 else el
+    el = '' if len(el) == 0 else el
     ch1 = f"{ch/te*100:.1f}".rstrip("0").rstrip(".") if te else 'n/a'
     er1 = f"{co/cl*100:.3f}".rstrip("0").rstrip(".") if cl else 'n/a'
-    er2 = f"{(cl-co)/cl*100:.3f}".rstrip("0").rstrip(".") if cl else 'n/a'
+    sk1 = f"{sk/cl*100:.3f}".rstrip("0").rstrip(".") if cl else 'n/a'
+    se1 = f"{se/cl*100:.3f}".rstrip("0").rstrip(".") if cl else 'n/a'
     ts = f"{ordinal(f1)} line (attempt {f2}/10)" if f1 else 'Undetected'
 
     print( f"\n Total lines:     {cl} ({human_bytes(bt)}) {t1}\n"
-             f" Processed lines: {co} ({er1}%)\n"
-             f" Error lines:     {cl-co} ({er2}%) {el}\n"
+             f"   Processed:     {co} ({er1}%)\n"
+             f"   Error:         {se} ({se1}%) {el}\n"
+             f"   Skipped:       {sk} ({sk1}%)\n"
              f" Error match:     {c['e']}\n"
              f" Values in chart: {cv}\n"
              f" Terminal width:  {te} {'(-x limit)' if XWIDTH else ''}\n"
              f" Chart width:     {ch} ({ch1}%)\n"
-             f" Compression:     {cf}\n"
+             f" Compression:     {cf if cf > 1 else 'No'}\n"
              f" Amount Σ:        {len(g['g'])}\n"
-             f" Hit line/TS/D/T: ({l1},{l2},{l3},{l4})\n"
+             f" Filter ta/fr/to: {TARGET}, {TFROM}, {TTO}\n"
              f" First timestamp: {ts}\n"
-             f" f: TS='{c['a']}', D='{c['b']}', T='{c['c']}'\n"
-             f" l: TS='{c['X']}', D='{c['D']}', T='{c['T']}'\n", file=sys.stderr)
+             f"   Hit li/TS/D/T: ({l1},{l2},{l3},{l4})\n"
+             f"   f: TS='{c['a']}', D='{c['b']}', T='{c['c']}'\n"
+             f"   l: TS='{c['X']}', D='{c['D']}', T='{c['T']}'\n", file=sys.stderr)
 
 def reducef(p: list[str], f: int) -> int:
     if len(p) < 2:
@@ -678,25 +598,228 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
             print_x_legend(axisx, colle, grups, nega+long_numbers+3, num_braille_chars, compression_factor)
         else:
             print(f"{'':>{nega+long_numbers+3}} └{'─' * num_braille_chars}")
+    return
 
+def date_time_search(c: int, e: dict, a: dict, g: list, p: dict, cl: int) -> None:
+
+    if c == 10:
+        e['u'] = False
+        return None
+
+    e['l'][0] += 1
+    amx = [i for i, item in enumerate(g) if is_valid( item[:19], "ts" )]
+    e['l'][1] += len(amx)
+    if len(amx) == 1:
+        e['a'] = e['X'] = g[amx[0]][:19]
+        e['s'] = a['u'] = True
+        if CSUM: p['u'] = True
+        e['f'] = [cl, c+1]
+        e['x'] = amx[0]
+    else:
+        amd = [i for i, item in enumerate(g) if is_valid( item[:10], "dt" )]
+        e['l'][2] += len(amd)
+        if len(amd) == 1:
+            e['b'] = e['D'] = g[amd[0]][:10]
+            e['s'] = a['u'] = True
+            if CSUM: p['u'] = True
+            e['f'] = [cl, c+1]
+            e['d'] = amd[0]
+        amt = [i for i, item in enumerate(g) if is_valid( item[:8], "ti" )]
+        e['l'][3] += len(amt)
+        if len(amt) == 1:
+            e['c'] = e['T'] = g[amt[0]][:8]
+            e['s'] = a['u'] = True
+            if CSUM: p['u'] = True
+            e['f'] = [cl, c+1]
+            e['t'] = amt[0]
+
+    return None
+
+def extract_filters(args_list):
+    custom_filters = {}
+    cleaned_args = []
+    search_arg = ('from=',
+                    'to=',
+                'target=',
+                 'space=', )
+    
+    for a in args_list:
+        if a.startswith(search_arg):
+            key, value = a.split('=', 1)
+            if value:
+                custom_filters[key] = value
+            else:
+                cleaned_args.append(a)
+        else:
+            cleaned_args.append(a)
+    
+    return custom_filters, cleaned_args
+
+def valid_filter(f: dict, mode: str) -> str | None:
+    if mode == 'target':
+        if 'target' in f:
+            if is_valid( f["target"], "f1"):
+                return f["target"]
+            else:
+                return
+    
+    if mode == 'from':
+        if 'from' in f:
+            if is_valid( f["from"], "f1"):
+                return f["from"]
+            else:
+                return
+
+    if mode == 'to':
+        if 'to' in f:
+            if is_valid( f["to"], "f1"):
+                return f["to"]
+            else:
+                return
+
+    if mode == 'space':
+        if 'space' in f:
+            if len( f['space'] ) == 1 and f['space'].isdigit():
+                return int( f['space'] )
+            return
+    return
+
+def value_filtering(f: list, c: dict) -> bool:
+    if TARGET:
+        if c['x'] is not None:
+            if f[c['x']][:len(TARGET)] == TARGET:
+                return True
+        else:
+            d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
+            dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
+            if dt[:len(TARGET)] == TARGET:
+                return True
+            return False
+
+    fr = to = False
+
+    if TFROM is None:
+        fr = True
+    else:
+        if c['x'] is not None:
+            if f[c['x']][:len(TFROM)] >= TFROM:
+                fr = True
+        else:
+            d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
+            dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
+            if dt[:len(TFROM)] >= TFROM:
+                fr = True
+
+    if TTO is None:
+        to = True
+    else:
+        if c['x'] is not None:
+            if f[c['x']][:len(TTO)] <= TTO:
+                to = True
+        else:
+            d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
+            dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
+            if dt[:len(TTO)] <= TTO:
+                to = True
+    
+    if ( TFROM or TTO ) and fr and to:
+        return True
+
+    return False
+
+LEGEND = {    'y': 'years >  ',
+              'm': 'months > ',
+              'd': 'days >   ',
+              'H': 'hours >  ',
+              'M': 'minutes >',
+              'S': 'seconds >',}
+
+SUM_LEGEND = {'y': 'year Σ   ',
+              'm': 'month Σ  ',
+              'd': 'day Σ    ',
+              'H': 'hour Σ   ',
+              'M': 'min Σ    ',
+              'S': 'sec Σ    ',}
+
+ISO_PARTS = [ (0,  4, "y"),
+              (5,  7, "m"),
+              (8, 10, "d"),
+              (11,13, "H"),
+              (14,16, "M"),
+              (17,19, "S"),]
+
+DATE_PARTS = [(0, 4,'y'),
+              (5, 7,'m'),
+              (8,10,'d'),]
+
+TIME_PARTS = [(0,2,'H'),
+              (3,5,'M'),
+              (6,8,'S'),]
+
+filters, clean_args = extract_filters(sys.argv[1:])
+arg = get_arg()
+
+TARGET       = valid_filter(filters,'target')
+SPACE        = valid_filter(filters,'space')
+TFROM        = valid_filter(filters,'from')
+TTO          = valid_filter(filters,'to')
+COLUMN, CSUM = column_choice(arg.column)
+SHFT         = get_shift(arg.shft)
+MULTIV       = arg.multi_value
+SHOWLEGEND   = arg.show_legend
+SHOWSTATS    = arg.show_stat
+SEPA         = arg.separator
+DOWNV        = arg.bottomv
+YHEIGHT      = arg.height
+DEBUGFLAG    = arg.debug
+XWIDTH       = arg.width
+ADDM         = arg.addm
+TOPVAL       = arg.topv
+FILE         = arg.file
+
+FILTERON = bool(TARGET or TFROM or TTO)
+
+YHEIGHT = 2 if YHEIGHT < 2 else YHEIGHT
+XWIDTH  = None if XWIDTH is not None and XWIDTH < 1 else XWIDTH
+if TOPVAL is not None and DOWNV is not None and TOPVAL <= DOWNV:
+    TOPVAL = DOWNV = None
+
+TS_RE = re.compile( r'^\d{4}-'                # y 0000-9999
+                    r'(0[1-9]|1[0-2])-'       # m 01–12
+                    r'(0[1-9]|[12]\d|3[01])'  # d 01–31
+                    r'[T_]'
+                    r'([01]\d|2[0-3])'        # H 00–23
+                    r':[0-5]\d'               # M 00–59
+                    r':[0-5]\d')              # S 00–59
+
+DT_RE = re.compile( r'^\d{4}[-/]'             # y 0000-9999
+                    r'(0[1-9]|1[0-2])[-/]'    # m 01–12
+                    r'(0[1-9]|[12]\d|3[01])') # d 01–31
+
+TM_RE = re.compile( r'^([01]\d|2[0-3])'       # H 00-23
+                    r'[:.][0-5]\d'            # M 00-59
+                    r'(?:[:.][0-5]\d)?$')     # S 00-59 if is
 
 def main():
     size = 0
-    args = get_arg()
-    raw_values = []
     err_lines = []
+    raw_values = []
     long_numbers = 0
     long_floatpa = 2
     counter_line = 0
     counter_value = 0
+    counter_error = 0
+    counter_skipped = 0
 
     colle = { 'u': True,  # I use date/time
               's': False, # Found
+              'f': [0]*2, # fileline, first TS value
+              'l': [0]*4, # amount l/ts/d/t
               'e': 0,     # 0 = no errors
-              'f': [0,0], # fileline, first TS value
-              'l': [0,0,0,0], # amount l/ts/d/t
               'B': 0,     # data size, 
               'N': 0,     # load time
+              'p': 0,     # skipped line
+              'P': 0,     # error line
 
               'x': None,  # collumn
               'a': None,  # first - 0000-00-00T00:00:00
@@ -734,17 +857,16 @@ def main():
               'g': {},
             }
 
-
     # 1. pipe
-    if not sys.stdin.isatty() and not args.file:
+    if not sys.stdin.isatty() and not FILE:
         datain = sys.stdin
 
     # 2. file or files
     else:
         file_list = []
-        has_pattern = bool(args.file)
+        has_pattern = bool(FILE)
 
-        for pattern in args.file or []:
+        for pattern in FILE:
             matches = glob(pattern)
             if matches:
                 file_list.extend(matches)
@@ -771,38 +893,63 @@ def main():
     preview = list(islice(datain, 10))
     detect_input(preview)
     start_data_load = datetime.now()
+    
     try:
         for line in chain(preview, datain):
             counter_line += 1
             size += len(line)
+
             if COLUMN:
+
                 fields = line.split()
+
                 if len(fields) < COLUMN:
                     if len(err_lines) < 4: err_lines.append(counter_line)
+                    counter_error += 1
                     continue
+
+                if not colle['s'] and colle['u']:
+                    date_time_search(counter_value, colle, axisx, fields, grups, counter_line)
+
+                if FILTERON:
+                    if not value_filtering(fields, colle):
+                        counter_skipped += 1
+                        continue
+
                 line = fields[COLUMN-1]
+
             if SEPA:
                 line = line.replace(SEPA, '')
+
             line = line.strip().replace(',', '.')
+
             if line:
+
                 try:
                     value = ( float(line) + ADDM ) * SHFT
                     value = TOPVAL if TOPVAL is not None and value > TOPVAL else value
                     value = DOWNV if DOWNV is not None and value < DOWNV else value
+
                     if len(str(int(value))) > long_numbers:
                         long_numbers = len(str(int(value)))
+
                     raw_values.append(value)
                     counter_value += 1
 
                     if colle['u'] and COLUMN:
-                        date_time(fields, counter_line, counter_value, axisx, value, colle, grups)
+                        date_time(fields, counter_value, axisx, value, colle, grups)
+
                 except ValueError:
                     if len(err_lines) < 4: err_lines.append(counter_line)
+                    counter_error += 1
                     continue
         
         end_data_load = datetime.now()
         colle['B'] = size
+        colle['p'] = counter_skipped
+        colle['P'] = counter_error
         old_counter_value = counter_value
+
         if grups['u']:
             raw_values, long_numbers, counter_value = group_by_time(raw_values, long_numbers, counter_value, colle, grups)
 
@@ -841,9 +988,10 @@ def main():
                                  old_counter_value, err_lines, compression_factor)
         else:
             if DEBUGFLAG:
-                print( f'\n Total in. lines: {counter_line}\n'
-                       f' Processed lines: {old_counter_value}\n' )
-
+                print( f'\n     Total lines: {counter_line}\n'
+                       f' Processed lines: {old_counter_value}\n'
+                       f'     Error lines: {counter_error}\n'
+                       f'   Skipped lines: {counter_skipped}\n' )
 
     except KeyboardInterrupt:
         print(f'\nAfter loading {len(raw_values)} values, it was interrupted by the user.', file=sys.stderr)
@@ -854,7 +1002,7 @@ def main():
             try:
                 datain.close()
             except:
-                pass  # it is already closed
+                pass
 
 if __name__ == "__main__":
     main()
