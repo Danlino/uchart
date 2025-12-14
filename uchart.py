@@ -692,7 +692,7 @@ def value_filtering(f: list, c: dict) -> bool:
         else:
             d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
             dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
-            if dt[:len(TARGET)] == TARGET:
+            if re.sub(r'\D','',dt[:len(TARGET)]) == re.sub(r'\D','',TARGET):
                 return True
             return False
 
@@ -707,7 +707,7 @@ def value_filtering(f: list, c: dict) -> bool:
         else:
             d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
             dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
-            if dt[:len(TFROM)] >= TFROM:
+            if re.sub(r'\D','',dt[:len(TFROM)]) >= re.sub(r'\D','',TFROM):
                 fr = True
 
     if TTO is None:
@@ -719,7 +719,7 @@ def value_filtering(f: list, c: dict) -> bool:
         else:
             d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
             dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
-            if dt[:len(TTO)] <= TTO:
+            if re.sub(r'\D','',dt[:len(TTO)]) <= re.sub(r'\D','',TTO):
                 to = True
     
     if ( TFROM or TTO ) and fr and to:
