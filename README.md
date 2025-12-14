@@ -175,26 +175,26 @@ _**positional arguments:**_
 **filters**  
 &emsp;`Time filters.`  
 
-&emsp;`target=`&emsp;process only entries matching this exact timestamp (or period)
-&emsp;`from=`&emsp;start of the requested period (including this date/time)
-&emsp;`to=`&emsp;end of the requested period (including this date/time)
+&emsp;`target=`&emsp;process only entries matching this exact timestamp (or period)  
+&emsp;`from=`&emsp;start of the requested period (including this date/time)  
+&emsp;`to=`&emsp;end of the requested period (including this date/time)  
 
-&emsp;<ins>Supported formats:</ins>
+&emsp;<ins>Supported formats:</ins>  
 &emsp;yyyy&emsp;|&emsp;yyyy-mm&emsp;|&emsp;yyyy-mm-dd&emsp;|&emsp;yyyy-mm-ddThh  
-&emsp;|&emsp;yyyy-mm-ddThh:mm&emsp;|&emsp;yyyy-mm-ddThh:mm:ss
+&emsp;|&emsp;yyyy-mm-ddThh:mm&emsp;|&emsp;yyyy-mm-ddThh:mm:ss  
 
-&emsp;<ins>Examples:</ins>
-&emsp;Process only entries in December 2025
-&emsp;`target=2025-12`
+&emsp;<ins>Examples:</ins>  
+&emsp;Process only entries in December 2025  
+&emsp;`target=2025-12`  
 
-&emsp;Process entries from the beginning of 2025 up to a specific date
-&emsp;`from=2025 to=2025-06-30`
+&emsp;Process entries from the beginning of 2025 up to a specific date  
+&emsp;`from=2025 to=2025-06-30`  
 
-&emsp;Process only entries on a specific day and hour
-&emsp;`target=2025-12-14T13`
+&emsp;Process only entries on a specific day and hour  
+&emsp;`target=2025-12-14T13`  
 
-&emsp;Process everything from December 5, 2025 onwards (until the end of available data)
-&emsp;`from=2025-12-05`
+&emsp;Process everything from December 5, 2025 onwards (until the end of available data)  
+&emsp;`from=2025-12-05`  
 
 _**options:**_  
 
