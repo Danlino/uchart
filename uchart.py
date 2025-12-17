@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.9.24"
+__version__ = "0.9.25"
 from itertools import chain, islice
 from datetime import datetime
 from glob import glob
@@ -47,9 +47,9 @@ def get_arg():
     parser.add_argument('-l', '--no-legend',
                         action='store_false', dest='show_legend', default=True,
                         help='Do not display the chart legend.')
-    parser.add_argument('-n', '--no-stat',
-                        action='store_false', dest='show_stat', default=True,
-                        help='Do not display the chart stat.')
+    parser.add_argument('-n', '--note',
+                        type=str, default=None, metavar='TEXT', dest='show_stat',
+                        help='Custom chart title. (overrides default stats)')
     parser.add_argument('-t', '--top-value',
                         type=float, default=None, dest='topv', metavar='<N>',
                         help='Maximum value in chart. (upper limit of Y-axis)')
@@ -183,20 +183,42 @@ def get_dot_for_value(value, row, min_val, max_val, G_HEIGHT):
     y_in_row = pixel_pos % 4
     return y_in_row
 
-def average_values_in_groups(values_list, group_size):
+def average_values_in_groups(values_list, group_size, axisx: dict) -> list:
     result = []
     for i in range(0, len(values_list), group_size):
         group = values_list[i:i+group_size]
         if group:
             result.append(sum(group) / len(group))
+            axisx['e'].append(i+group_size)
     return result
 
-def group_values_for_multi(values_list, group_size):
+def group_values_for_multi(values_list, group_size, axisx: dict) -> list:
     result = []
     for i in range(0, len(values_list), group_size):
         group = values_list[i:i+group_size]
         if group:
             result.append(group)
+            axisx['e'].append(i+group_size)
+    return result
+
+def group_values_for_precisely(raw_values: list, width: int, axisx: dict) -> list:
+
+    result = []
+    amount_values = len(raw_values)
+
+    axisx['e'] = [round((i + 1) * amount_values / (width * 2) ) for i in range(width * 2)]
+    
+    size = [axisx['e'][0]]
+
+    for i in range(1, (width * 2) ):
+        size.append(axisx['e'][i] - axisx['e'][i-1])
+
+    start = 0
+
+    for end in axisx['e']:
+        result.append(raw_values[start:end])
+        start = end
+
     return result
 
 def date_time(g: list[str], c: int, a: dict, v: float, e: dict, p: dict) -> None:
@@ -389,18 +411,21 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
         vkey = list(v.keys())[0]
 
     positions = x[lkey]
-    total_braille_cols = 2 * b
+    precisely_list = a['e']
+    leg_point_pos = []
 
     line1 = [' '] * b
+    
+    for point in positions:
 
-    for pos in positions:
-        col = pos // c
-        if col >= total_braille_cols:
-            continue
+        for i, colu in enumerate(precisely_list):
+            if point > colu:
+                continue
+            break
 
-        term_col = col // 2
-        is_right = col % 2
-
+        term_col = i // 2
+        is_right = i % 2
+        leg_point_pos.append(term_col)
         bit = 1 << (0 if not is_right else 3)
 
         current = ord(line1[term_col]) - 0x2800 if line1[term_col] != ' ' else 0
@@ -408,25 +433,25 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
         line1[term_col] = chr(0x2800 + new_val)
 
     line2 = line1[:]
-    positions_reverse = x[lkey][::-1]
+    positions_reverse = leg_point_pos[::-1]
+    
     values_reverse = [s.lstrip('0') or '0' for s in v[vkey][::-1]]
     
     for pos, val in zip (positions_reverse, values_reverse):
 
-        col = int(pos) // (int(c) * 2)
         paint = True
 
         space = 2 if SPACE is None else SPACE
 
-        for i, _ in enumerate(val+'.'*space):
+        for i, _ in enumerate(val + '.' * space):
             try:
-                if line2[col+i+1] != ' ':
+                if line2[pos+i+1] != ' ':
                     paint = False
             except IndexError:
                 paint = False
         if paint:
             for i, iv in enumerate(val):
-                line2[col+i+1] = iv
+                line2[pos+i+1] = iv
         
     trans = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
     linex = ''.join(line2).translate(trans)
@@ -525,7 +550,7 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
     min_val = DOWNV if DOWNV is not None else min_val
     value_range = max_val - min_val
 
-    if SHOWSTATS:
+    if not TITLE and SHOWSTATS:
         total_original_values = len(original_raw_values)
         num_plot_columns = len(values_for_plot)
         if MULTIV:
@@ -534,6 +559,8 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
             print(f"\n[{total_original_values} values]")
         else:
             print(f"\n[{total_original_values} values; average of {compression_factor} values in a column]")
+    if TITLE:
+        print(f"{TITLE}")
 
     legend_values = []
 
@@ -758,7 +785,10 @@ TIME_PARTS = [(0,2,'H'),
 
 filters, clean_args = extract_filters(sys.argv[1:])
 arg = get_arg()
+T = arg.show_stat
 
+TITLE        = T.replace('\\n','\n').replace('\\t','\t') if T is not None else None
+SHOWSTATS    = True if arg.show_stat is None else False
 TARGET       = valid_filter(filters,'target')
 SPACE        = valid_filter(filters,'space')
 TFROM        = valid_filter(filters,'from')
@@ -767,7 +797,6 @@ COLUMN, CSUM = column_choice(arg.column)
 SHFT         = get_shift(arg.shft)
 MULTIV       = arg.multi_value
 SHOWLEGEND   = arg.show_legend
-SHOWSTATS    = arg.show_stat
 SEPA         = arg.separator
 DOWNV        = arg.bottomv
 YHEIGHT      = arg.height
@@ -836,8 +865,9 @@ def main():
 
     axisx = { 'u': False, 
               'm': get_terminal_width() if XWIDTH is None else XWIDTH,
-              'M': 0,
+              'M': 0,     # num_braille_chars
               'i': { k: True for k in 'ymdHMS' },
+              'e': [],    # precisely group list 
 
               'x': { k: [] for k in 'ymdHMS' },
               'a': { k: [] for k in 'ymdHMS' },
@@ -974,10 +1004,14 @@ def main():
                 if compression_factor == 0: compression_factor = 1
 
             val_for_plot = []
+
             if MULTIV:
-                val_for_plot = group_values_for_multi(raw_values, compression_factor)
+                if XWIDTH is None:
+                    val_for_plot = group_values_for_multi(raw_values, compression_factor, axisx)
+                else:
+                    val_for_plot = group_values_for_precisely(raw_values, XWIDTH, axisx)
             else:
-                val_for_plot = average_values_in_groups(raw_values, compression_factor)
+                val_for_plot = average_values_in_groups(raw_values, compression_factor, axisx)
             
             colle['N'] = (end_data_load - start_data_load).total_seconds()
             draw_graph(val_for_plot, raw_values, compression_factor, long_numbers,
