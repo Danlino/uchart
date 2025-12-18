@@ -29,20 +29,20 @@ $ seq -20 40 | uchart
     -20.0 │ ⣀⡠⠔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
           └──────────────────────────────────────
 ```
-- By default, the `uchart` uses the full terminal width for rendering the chart. Use the [`-x`](#usage-width) flag to specify a smaller width.
+- By default, the `uchart` uses the full terminal width for rendering the chart. Using the [`-x`](#usage-width) option, you can set a custom exact width for the chart. This option is suitable for creating a series of charts with the same size.
 
 ```
 $ seq 130 | awk '{print sin($1/10)}' | uchart -x40 -m
 
-[130 values in 65 columns; 2 values in a column]
-      1.0 │ ⠀⠀⡰⠚⠲⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡔⠒⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-      0.7 │ ⠀⠜⠀⠀⠀⠘⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠀⠀⠀⠱⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-      0.3 │ ⡰⠁⠀⠀⠀⠀⠘⡀⠀⠀⠀⠀⠀⠀⠀⠀⡔⠀⠀⠀⠀⠀⢡⠀⠀⠀⠀⠀⠀⠀⠀⢀⠅
-        0 │ ⠂⠀⠀⠀⠀⠀⠀⢑⠀⠀⠀⠀⠀⠀⠀⡨⠀⠀⠀⠀⠀⠀⠀⢅⠀⠀⠀⠀⠀⠀⠀⡌⠀
-     -0.3 │ ⠀⠀⠀⠀⠀⠀⠀⠀⢃⠀⠀⠀⠀⠀⢠⠁⠀⠀⠀⠀⠀⠀⠀⠈⡄⠀⠀⠀⠀⠀⡨⠀⠀
-     -0.7 │ ⠀⠀⠀⠀⠀⠀⠀⠀⠈⢆⠀⠀⠀⢀⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡄⠀⠀⠀⡰⠁⠀⠀
-     -1.0 │ ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢦⣀⡠⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢄⣀⡴⠁⠀⠀⠀
-          └─────────────────────────────────────────
+[130 values in 80 columns; 2 values in a column]
+      1.0 │⠀⠀⢀⠔⠊⠲⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡰⠒⠒⠦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+      0.7 │⠀⠠⠃⠀⠀⠀⠈⢢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠀⠀⠀⠀⠱⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+      0.3 │⡠⠃⠀⠀⠀⠀⠀⠀⢃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠆⠀⠀⠀⠀⠀⠀⠨⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡨
+        0 │⠂⠀⠀⠀⠀⠀⠀⠀⠀⢃⠀⠀⠀⠀⠀⠀⠀⠀⢀⠌⠀⠀⠀⠀⠀⠀⠀⠀⠡⡀⠀⠀⠀⠀⠀⠀⠀⠀⡨⠀
+     -0.3 │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢃⠀⠀⠀⠀⠀⠀⠀⡌⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢡⠀⠀⠀⠀⠀⠀⠀⡨⠀⠀
+     -0.7 │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢢⠀⠀⠀⠀⠀⡊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠱⡀⠀⠀⠀⠀⡔⠁⠀⠀
+     -1.0 │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠣⣄⣀⡠⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢄⣀⣠⠜⠀⠀⠀⠀
+          └─────────────────────────────────────────────────
 ```
 ### All values [(-m)](#usage-multy) & Average value
 
@@ -221,9 +221,10 @@ Minimum height of the chart is 2 terminal rows. Values less than 2 are forced to
 ##### -x <ins>NUMBER</ins>, --width <ins>NUMBER</ins> <a id="usage-width"></a>  
 &emsp;`Maximum chart width in characters.`
 
-uchart automatically fits the terminal width by default.
+Uchart automatically fits the terminal width by default.
 Since the X-axis is linear and all columns have the same number of samples, the final width is rounded down. This means the chart may end up substantially narrower than the window.
-With the `-x` / `--width` option you can set a custom maximum chart width (different from the terminal window width).
+
+Using the `-x` / `--width` option, you can set a custom **exact width** for the chart, expressed in the number of terminal characters. For example, with the value -x 20, exactly 40 Braille columns will be displayed. Uchart intelligently divides the input data into 40 groups and displays them.
 
 [^^](#usage)
 
@@ -268,8 +269,30 @@ This function excels at aggregating and visualizing high volumes of discrete eve
 [^^](#usage)
 
 ---
-##### -n, --no-stat <a id="usage-stat"></a>  
-&emsp;`Do not display the chart stat.`
+##### -n <ins>TEXT</ins>, --note <ins>TEXT <a id="usage-stat"></a>
+&emsp;`Custom chart title. (overrides default stats)`  
+
+If you wish to only remove the line with statistics, enter an empty string `-n ""`  
+
+Uchart can interpret the newline character `\n` and the tab character `\t` in text. It can also include emojis and expand the contents of Bash environment variables.  
+
+```bash
+# Let's get the amount of timeout for the last hour
+timeout=$(tail -60 ping.txt | grep "timeout" | wc -l)
+# We will display the chart
+tail -60 ping.txt | uchart -c3 -n "\n 🏓 timeout = ${timeout}/60 values"
+```
+```
+ 🏓 timeout = 0/60 values
+     39.4 │⠀⠀⠀⠀⠀⠀⠂⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     37.0 │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+     34.6 │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠂⠀⠀⠀⠀⠀
+     32.2 │⠀⠀⠀⠀⠀⠠⠀⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠂⠀⠀⠀⠀⠀⠀⠀⢀
+     29.9 │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠄⠄⠀⠐⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀
+     27.5 │⠐⠐⠐⠔⢀⠄⢀⠐⠀⠐⠀⢀⠄⠔⢀⠐⢀⢂⠀⡠⠔⠀⠤⢁⢀⢀⠀⠢⠀⠀
+     25.1 │⠁⠂⠁⠀⠁⠀⠀⠀⠔⠀⠊⠄⠈⠀⠁⠀⠀⠀⠄⠀⠀⠐⠀⠀⠀⠁⠈⠀⢄⡀
+          └─────────────────────────────────────
+```
 
 [^^](#usage)
 
