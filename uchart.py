@@ -48,7 +48,7 @@ def get_arg():
                         action='store_false', dest='show_legend', default=True,
                         help='Do not display the chart legend.')
     parser.add_argument('-n', '--note',
-                        type=str, default=None, metavar='TEXT', dest='show_stat',
+                        type=str, default=None, metavar='<TEXT>', dest='show_stat',
                         help='Custom chart title. (overrides default stats)')
     parser.add_argument('-t', '--top-value',
                         type=float, default=None, dest='topv', metavar='<N>',
@@ -63,11 +63,14 @@ def get_arg():
                         type=float, default=0, dest='addm', metavar='<N>',
                         help='The constant that will be added to each item. (default: %(default)s)')
     parser.add_argument('-f', '--format',
-                        type=str, choices=[',', '.'], dest='separator', default=None, metavar='SEP',
+                        type=str, choices=[',', '.'], dest='separator', default=None, metavar='<SEP>',
                         help="If numbers contain thousands separator, specify it: ',' or '.' (e.g. -f ,)")
     parser.add_argument('file', nargs='*', default=[],
                         help='The input data file, if not specified, is read from stdin.')
-    parser.epilog = ( f"optional time filters:\n"
+    parser.epilog = ( f"optional settings:\n"
+                      f"   space=   required free space after the digit on the X-axis (default: 2)\n"
+                      f"\n"
+                      f"optional time filters:\n"
                       f"   target=  requested period only\n"
                       f"   from=    requested period start (including)\n"
                       f"   to=      requested period end (including)\n"
@@ -183,16 +186,40 @@ def get_dot_for_value(value, row, min_val, max_val, G_HEIGHT):
     y_in_row = pixel_pos % 4
     return y_in_row
 
-def average_values_in_groups(values_list, group_size, axisx: dict) -> list:
+def average_values_in_groups(values_list: list, group_size, width: int, axisx: dict) -> list:
+    
     result = []
-    for i in range(0, len(values_list), group_size):
-        group = values_list[i:i+group_size]
-        if group:
-            result.append(sum(group) / len(group))
-            axisx['e'].append(i+group_size)
+
+    if width is None:
+        
+        for i in range(0, len(values_list), group_size):
+            group = values_list[i:i+group_size]
+            if group:
+                result.append(sum(group) / len(group))
+                axisx['e'].append(i+group_size)
+    else:
+    
+        n = width * 2
+        amount_values = len(values_list)
+        axisx['e'] = [round((i + 1) * amount_values / n ) for i in range(n)]
+
+        if len( values_list ) > n:
+
+            start = 0
+            for end in axisx['e']:
+                group = values_list[start:end]
+                if group:
+                    result.append(sum(group) / len(group))
+                    start = end
+        else:
+
+            indices = [i * (len(values_list) - 1) / (n - 1) for i in range(n)]
+            result = [values_list[round(idx)] for idx in indices]
+
     return result
 
-def group_values_for_multi(values_list, group_size, axisx: dict) -> list:
+def group_values_for_multi(values_list: list, group_size, axisx: dict) -> list:
+
     result = []
     for i in range(0, len(values_list), group_size):
         group = values_list[i:i+group_size]
@@ -204,14 +231,10 @@ def group_values_for_multi(values_list, group_size, axisx: dict) -> list:
 def group_values_for_precisely(raw_values: list, width: int, axisx: dict) -> list:
 
     result = []
+    n = width * 2
     amount_values = len(raw_values)
 
-    axisx['e'] = [round((i + 1) * amount_values / (width * 2) ) for i in range(width * 2)]
-    
-    size = [axisx['e'][0]]
-
-    for i in range(1, (width * 2) ):
-        size.append(axisx['e'][i] - axisx['e'][i-1])
+    axisx['e'] = [round((i + 1) * amount_values / n ) for i in range(n)]
 
     start = 0
 
@@ -521,6 +544,7 @@ def reducef(p: list[str], f: int) -> int:
             if c1 != c2:
                 max_needed = max(max_needed, pos + 1)
                 break
+
     return min(max_needed, f)
 
 def ordinal(n: int) -> str:
@@ -539,12 +563,8 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
     if not values_for_plot:
         return
 
-    if not original_raw_values:
-        min_val = min(val for group in values_for_plot for val in (group if isinstance(group, list) else [group]))
-        max_val = max(val for group in values_for_plot for val in (group if isinstance(group, list) else [group]))
-    else:
-        min_val = min(original_raw_values)
-        max_val = max(original_raw_values)
+    min_val = min(val for group in values_for_plot for val in (group if isinstance(group, list) else [group]))
+    max_val = max(val for group in values_for_plot for val in (group if isinstance(group, list) else [group]))
 
     max_val = TOPVAL if TOPVAL is not None else max_val
     min_val = DOWNV if DOWNV is not None else min_val
@@ -1011,7 +1031,7 @@ def main():
                 else:
                     val_for_plot = group_values_for_precisely(raw_values, XWIDTH, axisx)
             else:
-                val_for_plot = average_values_in_groups(raw_values, compression_factor, axisx)
+                val_for_plot = average_values_in_groups(raw_values, compression_factor, XWIDTH, axisx)
             
             colle['N'] = (end_data_load - start_data_load).total_seconds()
             draw_graph(val_for_plot, raw_values, compression_factor, long_numbers,
