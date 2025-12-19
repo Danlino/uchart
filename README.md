@@ -172,8 +172,7 @@ _**positional arguments:**_
 **file**  
 &emsp;`Input is read from stdin if piped, otherwise from the given file.`
   
-**filters**  
-&emsp;`Time filters.`  
+**time filters**  
 
 &emsp;`target=`&emsp;process only entries matching this exact timestamp (or period)  
 &emsp;`from=`&emsp;start of the requested period (including this date/time)  
@@ -196,6 +195,11 @@ _**positional arguments:**_
 &emsp;Process everything from December 5, 2025 onwards (until the end of available data)  
 &emsp;`from=2025-12-05`  
 
+**optional settings**  
+
+&emsp;`space=`&emsp;required free space after the digit on the X-axis (default: 2)  
+
+---
 _**options:**_  
 
 ##### -h, --help <a id="usage-help"></a>  
@@ -224,7 +228,11 @@ Minimum height of the chart is 2 terminal rows. Values less than 2 are forced to
 Uchart automatically fits the terminal width by default.
 Since the X-axis is linear and all columns have the same number of samples, the final width is rounded down. This means the chart may end up substantially narrower than the window.
 
-Using the `-x` / `--width` option, you can set a custom **exact width** for the chart, expressed in the number of terminal characters. For example, with the value -x 20, exactly 40 Braille columns will be displayed. Uchart intelligently divides the input data into 40 groups and displays them.
+Using the `-x` / `--width` option, you can set a custom **exact width** for the chart, expressed in the number of terminal characters. For example, with the value -x 20, exactly 40 Braille columns will be displayed. Uchart intelligently divides the input data into 40 groups and displays them. This option is, among other things, useful for combining charts of the same width into grids within the terminal window.
+
+Example of a terminal window welcome message.  
+
+![Welcome](images/welcome.png)
 
 [^^](#usage)
 
