@@ -559,15 +559,24 @@ def am_digit(p: list[str]) -> int:
 def negat(p: list[str]) -> bool:
     return any(s.startswith('-0.') for s in p)
 
-def draw_graph(values_for_plot, original_raw_values, compression_factor, long_numbers, long_floatpa, axisx, colle, grups, cl, cv):
+def draw_graph(values_for_plot, original_raw_values, compression_factor, long_numbers, long_floatpa, axisx, colle, grups):
     if not values_for_plot:
         return
+    
+    if TOPVAL is not None:
+        max_val = TOPVAL
+    else:
+        max_val = max(val for group in values_for_plot for val in (group if isinstance(group, list) else [group]))
 
-    min_val = min(val for group in values_for_plot for val in (group if isinstance(group, list) else [group]))
-    max_val = max(val for group in values_for_plot for val in (group if isinstance(group, list) else [group]))
-
-    max_val = TOPVAL if TOPVAL is not None else max_val
-    min_val = DOWNV if DOWNV is not None else min_val
+    if DOWNV is not None:
+        min_val = DOWNV
+    else:
+        min_val = min(val for group in values_for_plot for val in (group if isinstance(group, list) else [group]))
+    
+    if max_val <= min_val:
+        max_val = max(val for group in values_for_plot for val in (group if isinstance(group, list) else [group]))
+        min_val = min(val for group in values_for_plot for val in (group if isinstance(group, list) else [group]))
+    
     value_range = max_val - min_val
 
     if not TITLE and SHOWSTATS:
@@ -977,8 +986,6 @@ def main():
 
                 try:
                     value = ( float(line) + ADDM ) * SHFT
-                    value = TOPVAL if TOPVAL is not None and value > TOPVAL else value
-                    value = DOWNV if DOWNV is not None and value < DOWNV else value
 
                     if len(str(int(value))) > long_numbers:
                         long_numbers = len(str(int(value)))
@@ -1034,8 +1041,8 @@ def main():
                 val_for_plot = average_values_in_groups(raw_values, compression_factor, XWIDTH, axisx)
             
             colle['N'] = (end_data_load - start_data_load).total_seconds()
-            draw_graph(val_for_plot, raw_values, compression_factor, long_numbers,
-                       long_floatpa, axisx, colle, grups, counter_line, counter_value)
+            draw_graph(val_for_plot, raw_values, compression_factor,
+                       long_numbers, long_floatpa, axisx, colle, grups)
 
             if DEBUGFLAG:
                 print_debug_info(colle, axisx, grups, counter_line, counter_value,
