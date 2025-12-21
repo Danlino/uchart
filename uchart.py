@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.9.25"
+__version__ = "0.9.26"
 from itertools import chain, islice
 from datetime import datetime
 from glob import glob
@@ -186,11 +186,11 @@ def get_dot_for_value(value, row, min_val, max_val, G_HEIGHT):
     y_in_row = pixel_pos % 4
     return y_in_row
 
-def average_values_in_groups(values_list: list, group_size, width: int, axisx: dict) -> list:
+def average_values_in_groups(values_list: list, group_size, axisx: dict) -> list:
     
     result = []
 
-    if width is None:
+    if XWIDTH is None:
         
         for i in range(0, len(values_list), group_size):
             group = values_list[i:i+group_size]
@@ -199,9 +199,9 @@ def average_values_in_groups(values_list: list, group_size, width: int, axisx: d
                 axisx['e'].append(i+group_size)
     else:
     
-        n = width * 2
+        n = XWIDTH * 2
         amount_values = len(values_list)
-        axisx['e'] = [round((i + 1) * amount_values / n ) for i in range(n)]
+        axisx['e'] = [int(round((i + 1) * amount_values / n )) for i in range(n)]
 
         if len( values_list ) > n:
 
@@ -214,7 +214,7 @@ def average_values_in_groups(values_list: list, group_size, width: int, axisx: d
         else:
 
             indices = [i * (len(values_list) - 1) / (n - 1) for i in range(n)]
-            result = [values_list[round(idx)] for idx in indices]
+            result = [values_list[int(round(idx))] for idx in indices]
 
     return result
 
@@ -228,13 +228,13 @@ def group_values_for_multi(values_list: list, group_size, axisx: dict) -> list:
             axisx['e'].append(i+group_size)
     return result
 
-def group_values_for_precisely(raw_values: list, width: int, axisx: dict) -> list:
+def group_values_for_precisely(raw_values: list, axisx: dict) -> list:
 
     result = []
-    n = width * 2
+    n = XWIDTH * 2
     amount_values = len(raw_values)
 
-    axisx['e'] = [round((i + 1) * amount_values / n ) for i in range(n)]
+    axisx['e'] = [int(round((i + 1) * amount_values / n )) for i in range(n)]
 
     start = 0
 
@@ -472,6 +472,7 @@ def print_x_legend(a: dict, e: dict, p:dict, l: int, b: int, c: int) -> None:
                     paint = False
             except IndexError:
                 paint = False
+
         if paint:
             for i, iv in enumerate(val):
                 line2[pos+i+1] = iv
@@ -582,12 +583,26 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
     if not TITLE and SHOWSTATS:
         total_original_values = len(original_raw_values)
         num_plot_columns = len(values_for_plot)
+
+        cf = colle['g']
+
+        if cf:
+            if cf == int(cf):
+                cf = int(cf)
+            elif abs(cf - round(cf)) <= 0.1:
+                cf = f"~ {int(round(cf))}"
+            else:
+                cf = f"~ {round(cf,2)}"
+        else:
+            cf = compression_factor
+        
         if MULTIV:
-            print(f"\n[{total_original_values} values in {num_plot_columns} columns; {compression_factor} values in a column]")
+            print(f"\n[{total_original_values} values in {num_plot_columns} columns; {cf} values in a column]")
         elif compression_factor == 1:
             print(f"\n[{total_original_values} values]")
         else:
-            print(f"\n[{total_original_values} values; average of {compression_factor} values in a column]")
+            print(f"\n[{total_original_values} values; average of {cf} values in a column]")
+
     if TITLE:
         print(f"{TITLE}")
 
@@ -816,7 +831,7 @@ filters, clean_args = extract_filters(sys.argv[1:])
 arg = get_arg()
 T = arg.show_stat
 
-TITLE        = T.replace('\\n','\n').replace('\\t','\t') if T is not None else None
+TITLE        = T.replace('\\n','\n').replace('\\t','\t').replace('\\033','\033').replace('\\x1b','\x1b') if T is not None else None
 SHOWSTATS    = True if arg.show_stat is None else False
 TARGET       = valid_filter(filters,'target')
 SPACE        = valid_filter(filters,'space')
@@ -873,6 +888,7 @@ def main():
               's': False, # Found
               'f': [0]*2, # fileline, first TS value
               'l': [0]*4, # amount l/ts/d/t
+              'g': None,  # value/column
               'e': 0,     # 0 = no errors
               'B': 0,     # data size, 
               'N': 0,     # load time
@@ -1010,6 +1026,8 @@ def main():
         if grups['u']:
             raw_values, long_numbers, counter_value = group_by_time(raw_values, long_numbers, counter_value, colle, grups)
 
+        colle['g'] = counter_value/XWIDTH if counter_value and XWIDTH else colle['g']
+
         if long_numbers < 6:
             long_floatpa = 8 - long_numbers
             long_numbers = 6
@@ -1036,11 +1054,12 @@ def main():
                 if XWIDTH is None:
                     val_for_plot = group_values_for_multi(raw_values, compression_factor, axisx)
                 else:
-                    val_for_plot = group_values_for_precisely(raw_values, XWIDTH, axisx)
+                    val_for_plot = group_values_for_precisely(raw_values, axisx)
             else:
-                val_for_plot = average_values_in_groups(raw_values, compression_factor, XWIDTH, axisx)
+                val_for_plot = average_values_in_groups(raw_values, compression_factor, axisx)
             
             colle['N'] = (end_data_load - start_data_load).total_seconds()
+
             draw_graph(val_for_plot, raw_values, compression_factor,
                        long_numbers, long_floatpa, axisx, colle, grups)
 
