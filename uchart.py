@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.9.26"
+__version__ = "0.9.27"
 from itertools import chain, islice
 from datetime import datetime
 from glob import glob
@@ -120,9 +120,13 @@ def get_terminal_width() -> int:
     except:
         return 80
 
-# TODO(later): Use in future versions
-def detect_input(preview):
-    pass
+def detect_input(preview, colle, axisx, grups):
+
+    for cl, line in enumerate(preview, start=1):
+        fields = line.split()
+        if len(fields) > 1 and not colle['s'] and colle['u']:
+            date_time_search(colle, axisx, fields, grups, cl)
+
 
 def is_valid(s: str, mode: str) -> bool:
     
@@ -244,6 +248,36 @@ def group_values_for_precisely(raw_values: list, axisx: dict) -> list:
 
     return result
 
+def clean_axisx(a: dict, c: dict) -> None:
+
+    if c['d'] is not None or c['t'] is not None:
+        for k, kk, kkk in zip('dddttt', 'bbbccc', 'ymdHMS'):
+            if len(a[kk][kkk]) > 1 and len(set(a[kk][kkk])) <= 1:
+                a[k][kkk] = []
+                a[kk][kkk] = []
+        f = False
+        for k, kk, kkk in zip('tttddd', 'cccbbb', 'SMHdmy'):
+            if f:
+                a[k][kkk] = []
+                a[kk][kkk] = []
+                continue
+            if len(a[kk][kkk]) == 1:
+                f = True
+
+    if c['x'] is not None:
+        for k in 'ymdHMS':
+            if len(a['a'][k]) > 1 and len(set(a['a'][k])) <= 1:
+                a['x'][k] = []
+                a['a'][k] = []
+        f = False
+        for k in 'SMHdmy':
+            if f:
+                a['x'][k] = []
+                a['a'][k] = []
+                continue
+            if len(a['a']) == 1:
+                f = True
+
 def date_time(g: list[str], c: int, a: dict, v: float, e: dict, p: dict) -> None:
 
     if e['x'] is not None:
@@ -293,7 +327,24 @@ def date_time(g: list[str], c: int, a: dict, v: float, e: dict, p: dict) -> None
                                 a['t'][l].append(c)
                                 a['c'][l].append(g[e['t']][s1:s2])
                             toend = True
-                e['T'] = g[e['t']][:8] 
+                e['T'] = g[e['t']][:8]
+
+        if a['f'] and FILTERON:
+            
+            e['b'] = e['D']
+            e['c'] = e['T']
+            e['a'] = e['X']
+            
+            a['d'] = { 'y':[], 'm':[], 'd':[] }
+            a['b'] = { 'y':[], 'm':[], 'd':[] }
+            
+            a['t'] = { 'H':[], 'M':[], 'S':[] }
+            a['c'] = { 'H':[], 'M':[], 'S':[] }
+
+            a['x'] = { k: [] for k in 'ymdHMS' }
+            a['a'] = { k: [] for k in 'ymdHMS' }
+            
+            a['f'] = False
 
     if c%5 == 0:
 
@@ -496,7 +547,7 @@ def human_bytes(b: int) -> str:
 
 def print_debug_info(c, a, g, cl, cv, co, el, cf):
     ch, te, bt = a['M'], a['m'], c['B']
-    f1, f2 = c['f']
+    f1 = c['f']
     l1, l2, l3, l4 = c['l']
     sk, se = c['p'], c['P']
     t1 = f"{human_bytes(bt/c['N'])}/s" if c['N']>0.02 and bt>0 else ''
@@ -506,18 +557,18 @@ def print_debug_info(c, a, g, cl, cv, co, el, cf):
     er1 = f"{co/cl*100:.3f}".rstrip("0").rstrip(".") if cl else 'n/a'
     sk1 = f"{sk/cl*100:.3f}".rstrip("0").rstrip(".") if cl else 'n/a'
     se1 = f"{se/cl*100:.3f}".rstrip("0").rstrip(".") if cl else 'n/a'
-    ts = f"{ordinal(f1)} line (attempt {f2}/10)" if f1 else 'Undetected'
+    ts = f"{ordinal(f1)} line" if f1 else 'Undetected'
 
-    print( f"\n Total lines:     {cl} ({human_bytes(bt)}) {t1}\n"
-             f"   Processed:     {co} ({er1}%)\n"
-             f"   Error:         {se} ({se1}%) {el}\n"
-             f"   Skipped:       {sk} ({sk1}%)\n"
-             f" Error match:     {c['e']}\n"
+    print( f"\n Total lines....: {cl} ({human_bytes(bt)}) {t1}\n"
+             f"   Processed....: {co} ({er1}%)\n"
+             f"   Error........: {se} ({se1}%) {el}\n"
+             f"   Skipped......: {sk} ({sk1}%)\n"
+             f" Error match....: {c['e']}\n"
              f" Values in chart: {cv}\n"
-             f" Terminal width:  {te} {'(-x limit)' if XWIDTH else ''}\n"
-             f" Chart width:     {ch} ({ch1}%)\n"
-             f" Compression:     {cf if cf > 1 else 'No'}\n"
-             f" Amount Σ:        {len(g['g'])}\n"
+             f" Terminal width.: {te} {'(-x limit)' if XWIDTH else ''}\n"
+             f" Chart width....: {ch} ({ch1}%)\n"
+             f" Compression....: {cf if cf > 1 else 'No'}\n"
+             f" Amount Σ.......: {len(g['g'])}\n"
              f" Filter ta/fr/to: {TARGET}, {TFROM}, {TTO}\n"
              f" First timestamp: {ts}\n"
              f"   Hit li/TS/D/T: ({l1},{l2},{l3},{l4})\n"
@@ -563,7 +614,8 @@ def negat(p: list[str]) -> bool:
 def draw_graph(values_for_plot, original_raw_values, compression_factor, long_numbers, long_floatpa, axisx, colle, grups):
     if not values_for_plot:
         return
-    
+    clean_axisx(axisx, colle)
+
     if TOPVAL is not None:
         max_val = TOPVAL
     else:
@@ -671,11 +723,7 @@ def draw_graph(values_for_plot, original_raw_values, compression_factor, long_nu
             print(f"{'':>{nega+long_numbers+3}} └{'─' * num_braille_chars}")
     return
 
-def date_time_search(c: int, e: dict, a: dict, g: list, p: dict, cl: int) -> None:
-
-    if c == 10:
-        e['u'] = False
-        return None
+def date_time_search(e: dict, a: dict, g: list, p: dict, cl: int) -> None:
 
     e['l'][0] += 1
     amx = [i for i, item in enumerate(g) if is_valid( item[:19], "ts" )]
@@ -684,7 +732,7 @@ def date_time_search(c: int, e: dict, a: dict, g: list, p: dict, cl: int) -> Non
         e['a'] = e['X'] = g[amx[0]][:19]
         e['s'] = a['u'] = True
         if CSUM: p['u'] = True
-        e['f'] = [cl, c+1]
+        e['f'] = cl
         e['x'] = amx[0]
     else:
         amd = [i for i, item in enumerate(g) if is_valid( item[:10], "dt" )]
@@ -693,7 +741,7 @@ def date_time_search(c: int, e: dict, a: dict, g: list, p: dict, cl: int) -> Non
             e['b'] = e['D'] = g[amd[0]][:10]
             e['s'] = a['u'] = True
             if CSUM: p['u'] = True
-            e['f'] = [cl, c+1]
+            e['f'] = cl
             e['d'] = amd[0]
         amt = [i for i, item in enumerate(g) if is_valid( item[:8], "ti" )]
         e['l'][3] += len(amt)
@@ -701,7 +749,7 @@ def date_time_search(c: int, e: dict, a: dict, g: list, p: dict, cl: int) -> Non
             e['c'] = e['T'] = g[amt[0]][:8]
             e['s'] = a['u'] = True
             if CSUM: p['u'] = True
-            e['f'] = [cl, c+1]
+            e['f'] = cl
             e['t'] = amt[0]
 
     return None
@@ -886,7 +934,7 @@ def main():
 
     colle = { 'u': True,  # I use date/time
               's': False, # Found
-              'f': [0]*2, # fileline, first TS value
+              'f': 0,     # fileline find
               'l': [0]*4, # amount l/ts/d/t
               'g': None,  # value/column
               'e': 0,     # 0 = no errors
@@ -912,7 +960,8 @@ def main():
               'm': get_terminal_width() if XWIDTH is None else XWIDTH,
               'M': 0,     # num_braille_chars
               'i': { k: True for k in 'ymdHMS' },
-              'e': [],    # precisely group list 
+              'e': [],    # precisely group list
+              'f': True,  # first value
 
               'x': { k: [] for k in 'ymdHMS' },
               'a': { k: [] for k in 'ymdHMS' },
@@ -966,7 +1015,7 @@ def main():
             datain = multi_file_stream(file_list)
 
     preview = list(islice(datain, 10))
-    detect_input(preview)
+    detect_input(preview, colle, axisx, grups)
     start_data_load = datetime.now()
     
     try:
@@ -978,18 +1027,15 @@ def main():
 
                 fields = line.split()
 
-                if len(fields) < COLUMN:
-                    if len(err_lines) < 4: err_lines.append(counter_line)
-                    counter_error += 1
-                    continue
-
-                if not colle['s'] and colle['u']:
-                    date_time_search(counter_value, colle, axisx, fields, grups, counter_line)
-
                 if FILTERON:
                     if not value_filtering(fields, colle):
                         counter_skipped += 1
                         continue
+
+                if len(fields) < COLUMN:
+                    if len(err_lines) < 4: err_lines.append(counter_line)
+                    counter_error += 1
+                    continue
 
                 line = fields[COLUMN-1]
 
@@ -1072,7 +1118,7 @@ def main():
                        f' Processed lines: {old_counter_value}\n'
                        f'     Error lines: {counter_error}\n'
                        f'   Skipped lines: {counter_skipped}\n' )
-
+        
     except KeyboardInterrupt:
         print(f'\nAfter loading {len(raw_values)} values, it was interrupted by the user.', file=sys.stderr)
         sys.exit(130)
