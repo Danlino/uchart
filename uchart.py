@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.9.27"
+__version__ = "0.9.28"
 from itertools import chain, islice
 from datetime import datetime
 from glob import glob
@@ -59,6 +59,9 @@ def get_arg():
     parser.add_argument('-s', '--shift',
                         type=int, default=None, dest='shft', metavar='<N>',
                         help='Shift decimal point. (e.g. -6 = ÷1_000_000, 3 = ×1_000)')
+    parser.add_argument('-S', '--binary-units',
+                        type=str, choices=['K', 'M', 'G', 'T'], dest='binary', default=None, metavar='<KMGT>',
+                        help="Display sizes in binary units (KiB, MiB, GiB, TiB)")
     parser.add_argument('-a', '--add',
                         type=float, default=0, dest='addm', metavar='<N>',
                         help='The constant that will be added to each item. (default: %(default)s)')
@@ -86,12 +89,22 @@ def get_arg():
         sys.exit(0)
     return args
 
-def get_shift(shft: int | None) -> float | int:
-    if shft is None or shft == 0:
-        return 1
-    if not -15 <= shft <= 15:
-        return 1
-    return 10 ** shft
+def get_shift(shft: int | None, binary: str | None) -> float | int:
+
+    match ( shft, binary ):
+
+        case ( None , None ):
+            return 1
+
+        case ( _ , None ):
+            if -15 <= shft <= 15 and shft != 0:
+                return 10 ** shft
+
+        case ( None, _ ):
+            for i, x in enumerate('KMGT'):
+                if x == binary:
+                    return 1 / 1024 ** (i+1)
+    return 1
 
 def column_choice(s: str | None):
     if s:
@@ -881,12 +894,12 @@ T = arg.show_stat
 
 TITLE        = T.replace('\\n','\n').replace('\\t','\t').replace('\\033','\033').replace('\\x1b','\x1b') if T is not None else None
 SHOWSTATS    = True if arg.show_stat is None else False
-TARGET       = valid_filter(filters,'target')
-SPACE        = valid_filter(filters,'space')
-TFROM        = valid_filter(filters,'from')
-TTO          = valid_filter(filters,'to')
+SHFT         = get_shift(arg.shft, arg.binary)
+TARGET       = valid_filter(filters, 'target')
+SPACE        = valid_filter(filters, 'space')
+TFROM        = valid_filter(filters, 'from')
+TTO          = valid_filter(filters, 'to')
 COLUMN, CSUM = column_choice(arg.column)
-SHFT         = get_shift(arg.shft)
 MULTIV       = arg.multi_value
 SHOWLEGEND   = arg.show_legend
 SEPA         = arg.separator
