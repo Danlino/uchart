@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.9.28"
+__version__ = "0.9.29"
 from itertools import chain, islice
 from datetime import datetime
 from glob import glob
@@ -817,45 +817,48 @@ def valid_filter(f: dict, mode: str) -> str | None:
     return
 
 def value_filtering(f: list, c: dict) -> bool:
-    if TARGET:
-        if c['x'] is not None:
-            if f[c['x']][:len(TARGET)] == TARGET:
-                return True
-        else:
-            d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
-            dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
-            if re.sub(r'\D','',dt[:len(TARGET)]) == re.sub(r'\D','',TARGET):
-                return True
-            return False
+    try:
+        if TARGET:
+            if c['x'] is not None:
+                if f[c['x']][:len(TARGET)] == TARGET:
+                    return True
+            else:
+                d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
+                dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
+                if re.sub(r'\D','',dt[:len(TARGET)]) == re.sub(r'\D','',TARGET):
+                    return True
+                return False
 
-    fr = to = False
+        fr = to = False
 
-    if TFROM is None:
-        fr = True
-    else:
-        if c['x'] is not None:
-            if f[c['x']][:len(TFROM)] >= TFROM:
-                fr = True
+        if TFROM is None:
+            fr = True
         else:
-            d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
-            dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
-            if re.sub(r'\D','',dt[:len(TFROM)]) >= re.sub(r'\D','',TFROM):
-                fr = True
+            if c['x'] is not None:
+                if f[c['x']][:len(TFROM)] >= TFROM:
+                    fr = True
+            else:
+                d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
+                dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
+                if re.sub(r'\D','',dt[:len(TFROM)]) >= re.sub(r'\D','',TFROM):
+                    fr = True
 
-    if TTO is None:
-        to = True
-    else:
-        if c['x'] is not None:
-            if f[c['x']][:len(TTO)] <= TTO:
-                to = True
+        if TTO is None:
+            to = True
         else:
-            d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
-            dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
-            if re.sub(r'\D','',dt[:len(TTO)]) <= re.sub(r'\D','',TTO):
-                to = True
-    
-    if ( TFROM or TTO ) and fr and to:
-        return True
+            if c['x'] is not None:
+                if f[c['x']][:len(TTO)] <= TTO:
+                    to = True
+            else:
+                d = f[c['d']][:10] if c['d'] is not None else '0000-00-00'
+                dt = d+'T'+f[c['t']][:8] if c['t'] is not None else d+'T00:00:00'
+                if re.sub(r'\D','',dt[:len(TTO)]) <= re.sub(r'\D','',TTO):
+                    to = True
+
+        if ( TFROM or TTO ) and fr and to:
+            return True
+    except:
+        pass
 
     return False
 
